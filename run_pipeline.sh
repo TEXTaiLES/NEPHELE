@@ -13,6 +13,8 @@ SAMplify_SuGaR_PATH="${SAMplify_SuGaR_PATH:-$SCRIPT_DIR}"
 SAM2_PATH="${SAM2_PATH:-${SAMplify_SuGaR_PATH}/SAM2}"
 SUGAR_PATH="${SUGAR_PATH:-${SAMplify_SuGaR_PATH}/SUGAR/SuGaR}"
 COLMAP_OUT_PATH="${COLMAP_OUT_PATH:-${SAMplify_SuGaR_PATH}/colmap}"
+
+export DATASET_NAME SUGAR_PATH SAMplify_SuGaR_PATH SAM2_PATH COLMAP_OUT_PATH
 #
 
 # Where SAM2 expects input/output INSIDE the container:
@@ -189,3 +191,4 @@ bash ./run_sugar_pipeline_with_sam.sh "$DATASET_NAME"
 
 echo "[*] Pipeline completed successfully!"
 echo "LOG: $LOGFILE"
+
