@@ -235,7 +235,7 @@ rsync -a --delete \
 echo "Copied images: $(find "$IMAGES_DST" -maxdepth 1 -type f | wc -l)"
 echo "Copied masks : $(find "$MASKS_DST" -maxdepth 1 -type f | wc -l)"
 
----- run COLMAP ----
+# ---- run COLMAP ----
 bash "$COLMAP_OUT_PATH/run_colmap.sh" \
   "$IMAGES_DST" \
   "$MASKS_DST" \
@@ -271,4 +271,4 @@ bash ./run_sugar_pipeline_with_sam.sh "$DATASET_NAME"
 
 echo "[*] Pipeline completed successfully!"
 echo "Pipeline completed. Check log: $LOGFILE"
-
+echo "[*] Pipeline completed" | tee /dev/tty
