@@ -1,7 +1,7 @@
 # Use *devel* so nvcc is available to build CUDA extensions
 FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
 
-# ---------- ENV ----------
+# ---------- ENV (system-level) ----------
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -9,7 +9,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     MPLBACKEND=TkAgg \
     CUDA_HOME=/usr/local/cuda \
     TORCH_CUDA_ARCH_LIST=8.6 \
-    # defaults used by your runner/scripts
     IN_MNT=/data/in \
     OUT_MNT=/data/out \
     INDEX_ROOT=/data/out/__index_cache__
@@ -23,45 +22,46 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libx11-xcb1 libxkbcommon-x11-0 libxrender1 libxext6 libxfixes3 libxi6 libxtst6 libsm6 \
  && rm -rf /var/lib/apt/lists/*
 
-# ---------- Create non-root user (match host UID/GID if passed) ----------
+# ---------- Create non-root user (MATCH HOST UID/GID at build) ----------
 ARG UID=1000
 ARG GID=1000
-RUN groupadd -g ${GID} user || true && \
-    useradd -m -u ${UID} -g ${GID} -s /bin/bash user
-# Workdirs & mounts with correct ownership
-RUN mkdir -p /workspace ${IN_MNT} ${OUT_MNT} && chown -R user:user /workspace ${IN_MNT} ${OUT_MNT}
+ARG UNAME=user
+RUN groupadd -g ${GID} ${UNAME} || true \
+ && useradd -m -u ${UID} -g ${GID} -s /bin/bash ${UNAME}
+RUN mkdir -p /workspace ${IN_MNT} ${OUT_MNT} && chown -R ${UID}:${GID} /workspace ${IN_MNT} ${OUT_MNT}
 
-USER user
-WORKDIR /home/user
+# Default umask so new files keep group write
+RUN echo 'umask 0002' >> /etc/profile
 
-# ---------- Python & Torch ----------
+# ---------- System-wide Python deps (as root) ----------
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 RUN python3 -m pip install --upgrade pip && \
     pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu121 \
-        torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1
+      torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 && \
+    pip install --no-cache-dir \
+      numpy pillow opencv-python matplotlib tqdm \
+      einops timm pycocotools imageio[ffmpeg] av pyyaml
 
-# Core deps (headless OpenCV, plotting, I/O, transformers utils, etc.)
-RUN pip install --no-cache-dir \
-    numpy pillow opencv-python-headless matplotlib tqdm \
-    einops timm pycocotools imageio[ffmpeg] av pyyaml
+# ---------- SAM2 system-wide ----------
+RUN git clone --depth=1 https://github.com/facebookresearch/segment-anything-2.git /opt/segment-anything-2
+WORKDIR /opt/segment-anything-2
+RUN pip install --no-cache-dir --upgrade setuptools wheel
+# non-editable install
+RUN pip install --no-cache-dir --no-build-isolation .
 
-# ---------- SAM2 ----------
-RUN git clone https://github.com/facebookresearch/segment-anything-2.git
-WORKDIR /home/user/segment-anything-2
-# Build/Install the package against the pinned torch
-RUN pip install --no-cache-dir -v --no-build-isolation -e .
+RUN pip install --no-cache-dir flask==3.0.3
 
-# ---------- App workspace ----------
-# We won’t COPY your repo here, because you bind-mount $PWD → /workspace.
-# But we keep a neutral working dir so /workspace is the default.
-RUN mkdir -p /home/user/app && mkdir -p /workspace && \
-    ln -s /home/user/app /workspace/app || true
+# ---------- Switch to non-root user and set HOME-aware env ----------
+USER ${UNAME}
+ENV HOME=/home/${UNAME}
+ENV PYTHONUSERBASE=$HOME/.local
+ENV PATH=$HOME/.local/bin:$PATH
+
 WORKDIR /workspace
+# (optional) convenience app link
+RUN mkdir -p "$HOME/app" && ln -s "$HOME/app" /workspace/app || true
 
-# Helpful defaults (your run_command can override with -e)
-ENV INPUT=${IN_MNT}/vazo \
-    OUT=${OUT_MNT} \
-    GUI=0 \
-    FRAME_IDX=0 \
-    OBJ_ID=1
+# Keep group-writable on interactive shells and CMD
+RUN echo 'umask 0002' >> "$HOME/.bashrc"
 
-CMD ["/bin/bash"]
+CMD ["/bin/bash", "-lc", "umask 0002 && exec bash"]

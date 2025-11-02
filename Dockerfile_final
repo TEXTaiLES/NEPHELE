@@ -1,27 +1,47 @@
+# =========================================================
+# Stage 1: Get prebuilt COLMAP binary
+# =========================================================
+FROM colmap/colmap:latest AS colmap
+
+
+# =========================================================
+# Stage 2: Main SuGaR environment with CUDA + Python + Conda
+# =========================================================
 FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
+# FROM nvidia/cuda:12.2.2-devel-ubuntu22.04
+
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 ENV PATH="/opt/conda/bin:${PATH}"
 ENV TORCH_CUDA_ARCH_LIST="6.0;6.1;7.0;7.5;8.0;8.6+PTX"
 
-
-
-# System dependencies
+# ---- System dependencies ----
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git wget build-essential cmake ninja-build g++ \
     libglew-dev libassimp-dev libboost-all-dev libgtk-3-dev libopencv-dev \
     libglfw3-dev libavdevice-dev libavcodec-dev libeigen3-dev libxxf86vm-dev \
-    libembree-dev libtbb-dev ca-certificates ffmpeg curl python3-pip python3-dev \
+    libembree-dev libtbb-dev libomp-dev ca-certificates ffmpeg curl python3-pip python3-dev \
     libgl1-mesa-glx libegl1-mesa libegl1 libxrandr2 libxinerama1 libxcursor1 libxi6 libxxf86vm1 \
     libglu1-mesa xvfb mesa-utils \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Miniconda
+# ---- Fix missing libomp.so.5 for MKL ----
+RUN apt-get install -y libomp-dev && \
+    if [ -f /usr/lib/x86_64-linux-gnu/libomp.so ]; then \
+        ln -sf /usr/lib/x86_64-linux-gnu/libomp.so /usr/lib/x86_64-linux-gnu/libomp.so.5; \
+    fi
+
+
+
+
+# ---- Miniconda ----
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh \
-    && bash miniconda.sh -b -p /opt/conda && rm miniconda.sh
+    && bash miniconda.sh -b -p /opt/conda \
+    && rm miniconda.sh
 
 WORKDIR /app
+
 
 # Clone SuGaR repo
 RUN git clone https://github.com/Anttwo/SuGaR.git --recursive .
@@ -46,50 +66,40 @@ RUN source /opt/conda/etc/profile.d/conda.sh && \
 RUN ln -sf /app/gaussian_splatting/submodules/diff-gaussian-rasterization/diff_gaussian_rasterization /app/gaussian_splatting/ && \
     ln -sf /app/gaussian_splatting/submodules/simple-knn/simple_knn /app/gaussian_splatting/
 
-# Node.js 20 + npm 10
+
+# ---- Node.js 20 + npm 10 ----
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
     npm install -g npm@10
 
-# Create helper script for xvfb
+# ---- Helper script for xvfb ----
 RUN printf '#!/bin/bash\nxvfb-run -a -s "-screen 0 1280x1024x24" "$@"\n' > /app/run_with_xvfb.sh && \
     chmod +x /app/run_with_xvfb.sh
 
-# Entrypoint
-RUN printf '#!/bin/bash\nsource /opt/conda/etc/profile.d/conda.sh\nconda activate sugar\nexec "$@"\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+# ---- Entrypoint ----
+RUN printf '#!/bin/bash\nsource /opt/conda/etc/profile.d/conda.sh\nconda activate sugar\nexec "$@"\n' > /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
 ENTRYPOINT ["/app/entrypoint.sh"]
 
-# --- Install viewer dependencies ---
+# ---- Install viewer dependencies ----
 WORKDIR /app/sugar_viewer
 RUN npm install --legacy-peer-deps && npm install -g vite
 WORKDIR /app
 
+# ---- Copy COLMAP binaries ----
+COPY --from=colmap /usr/local/bin/colmap /usr/local/bin/colmap
+COPY --from=colmap /usr/local/lib/ /usr/local/lib/
+COPY --from=colmap /usr/lib/x86_64-linux-gnu/ /usr/lib/x86_64-linux-gnu/
+ENV LD_LIBRARY_PATH="/usr/local/lib:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
 
-# -------------------------------------------------------------------# -------------------------------------------------------------------
-# COLMAP (CUDA, headless) deps
-# -------------------------------------------------------------------
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libfreeimage-dev libmetis-dev libsqlite3-dev libgoogle-glog-dev libgflags-dev \
-    libsuitesparse-dev libflann-dev qtbase5-dev libqt5opengl5-dev libceres-dev \
-    libcgal-dev libgmp-dev libmpfr-dev \
-    && rm -rf /var/lib/apt/lists/*
+# ---- Create user ----
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN groupadd -g ${GROUP_ID} sugaruser && \
+    useradd -m -u ${USER_ID} -g ${GROUP_ID} -s /bin/bash sugaruser && \
+    mkdir -p /home/sugaruser && chown -R ${USER_ID}:${GROUP_ID} /home/sugaruser /app
+USER sugaruser
 
-WORKDIR /opt
-RUN git clone --recursive https://github.com/colmap/colmap.git && \
-    cmake -S colmap -B colmap/build -GNinja \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DCUDA_ENABLED=ON \
-      -DGUI_ENABLED=OFF \
-      -DTESTS_ENABLED=OFF \
-      -DCMAKE_CUDA_ARCHITECTURES="60;61;70;75;80;86" && \
-    cmake --build colmap/build --target install && \
-    rm -rf /opt/colmap
-
-
-
-# Back to app
-WORKDIR /app
-
-# Default = training mode (bash)
-CMD ["bash"]
-
+# ---- Entrypoint ----
+RUN printf '#!/bin/bash\nsource /opt/conda/etc/profile.d/conda.sh\nconda activate sugar\nexec "$@"\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+ENTRYPOINT ["/app/entrypoint.sh"]
