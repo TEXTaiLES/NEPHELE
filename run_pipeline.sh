@@ -121,6 +121,7 @@ rm -f "$DONE_FLAG" "$USE_EXISTING_FLAG"
 
 echo "[*] Starting Flask point picker for '$DATASET_NAME' on http://localhost:${WEB_PORT}/ ..."
 
+
 $DOCKER_BIN run -d --name "$PICKER_NAME" --gpus all \
   --user "${HOST_UID}:${HOST_GID}" \
   --workdir /workspace \
@@ -132,6 +133,7 @@ $DOCKER_BIN run -d --name "$PICKER_NAME" --gpus all \
   -e INPUT="/data/in/$DATASET_NAME" \
   -e OUT="/data/out" \
   -e INDEX_SUFFIX="$INDEX_SUFFIX" \
+ -e HF_HOME="/data/out/.cache/huggingface" \
   "${DOCKER_GUI_FLAGS[@]}" \
   sam2:local \
   bash -lc 'umask 0002; python3 app/point_picker_flask.py'
@@ -141,23 +143,16 @@ echo "[*] Open to select points: http://localhost:${WEB_PORT}/" | tee /dev/tty
 
 echo "[*] Waiting for decision/save → $DONE_FLAG"
 
-baseline_mtime=0
-[[ -f "$PROMPTS_HOST" ]] && baseline_mtime=$(stat -c %Y "$PROMPTS_HOST" 2>/dev/null || echo 0)
-
 while :; do
   if [[ -f "$DONE_FLAG" ]]; then
     echo "[*] Picker signaled DONE_FLAG. Proceeding..."
     break
   fi
-  if [[ -f "$PROMPTS_HOST" ]]; then
-    cur_mtime=$(stat -c %Y "$PROMPTS_HOST" 2>/dev/null || echo 0)
-    if [[ "$cur_mtime" -gt "$baseline_mtime" ]]; then
-      echo "[*] prompts.json updated (mtime=$cur_mtime). Proceeding..."
-      break
-    fi
-  fi
   sleep 1
 done
+
+
+
 
 $DOCKER_BIN stop "$PICKER_NAME" >/dev/null 2>&1 || true
 $DOCKER_BIN rm -f "$PICKER_NAME" >/dev/null 2>&1 || true
@@ -178,6 +173,9 @@ else
 fi
 
 rm -f "$DONE_FLAG" "$USE_EXISTING_FLAG"
+
+
+
 
 echo "[*] Running SAM2 propagation using saved prompts..."
 $DOCKER_BIN run --rm --gpus all \
@@ -214,23 +212,28 @@ install -d -m 775 \
   "$COLMAP_OUT_PATH/input/${DATASET_NAME}_indexed"
 
 # ---- paths ----
-IMAGES_SRC="$SAM2_PATH/data/input/${DATASET_NAME}"
+IMAGES_SRC="$SAM2_PATH/data/input/${DATASET_NAME}_indexed"
 MASKS_SRC="$SAM2_PATH/data/output/${DATASET_NAME}_indexed"
 IMAGES_DST="$COLMAP_OUT_PATH/input/${DATASET_NAME}"
 MASKS_DST="$COLMAP_OUT_PATH/input/${DATASET_NAME}_indexed"
 OUT_DST="$COLMAP_OUT_PATH/output/${DATASET_NAME}"
 
+
 # ---- ensure dest dirs ----
 mkdir -p "$IMAGES_DST" "$MASKS_DST" "$OUT_DST"
 
-# ---- copy only images (jpg/jpeg/png) ----
+# ---- copy only indexed images (jpg/jpeg/png) ----
 rsync -a --delete \
   --include '*/' --include '*.jpg' --include '*.jpeg' --include '*.png' --exclude '*' \
   "${IMAGES_SRC}/" "${IMAGES_DST}/"
 
+# ---- copy only binary masks, exclude preview overlays ----
 rsync -a --delete \
-  --include '*/' --include '*.jpg' --include '*.jpeg' --include '*.png' --exclude '*' \
+  --include '*/' \
+  --exclude 'preview/**' \
+  --include '*.jpg' --include '*.jpeg' --include '*.png' --exclude '*' \
   "${MASKS_SRC}/" "${MASKS_DST}/"
+
 
 echo "Copied images: $(find "$IMAGES_DST" -maxdepth 1 -type f | wc -l)"
 echo "Copied masks : $(find "$MASKS_DST" -maxdepth 1 -type f | wc -l)"

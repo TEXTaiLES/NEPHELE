@@ -19,10 +19,13 @@ from __future__ import annotations
 import json
 import glob
 import os
+import subprocess
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
 
+
 from flask import Flask, request, redirect, render_template_string, send_from_directory, jsonify
+
 
 # =============================================================================
 # Configuration & Environment
@@ -43,6 +46,10 @@ INDEXED_DIR.mkdir(parents=True, exist_ok=True)
 PROMPTS_JSON = INDEXED_DIR / "prompts.json"
 DONE_FLAG = INDEXED_DIR / "__picker_done.flag"
 USE_EXISTING = INDEXED_DIR / "__use_existing.flag"
+
+PREVIEW_DIR = INDEXED_DIR / "preview"
+PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+
 
 # =============================================================================
 # HTML Templates (Apple-like UI)
@@ -180,6 +187,15 @@ PICK_HTML = """
     --accent: #0a84ff; --pos: #34c759; --neg: #ff3b30;
     --shadow: 0 30px 80px rgba(0,0,0,0.45); --glass: saturate(180%) blur(22px);
   }
+  @keyframes bounceDot {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+    40%          { transform: translateY(-4px); opacity: 1; }
+  }
+
+  .dot-bounce{
+    animation: bounceDot 0.7s ease-in-out infinite;
+  }
+
   @media (prefers-color-scheme: light){
     :root{ --bg:#f5f5f7; --ink:#0b0b0d; --muted:#6e6e73; --card:rgba(255,255,255,0.72); --border:rgba(0,0,0,0.08); --shadow:0 30px 70px rgba(0,0,0,0.12); }
   }
@@ -342,6 +358,109 @@ PICK_HTML = """
 
 <div id="toast" class="toast">Saved</div>
 
+<div id="previewModal" style="
+  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.55); backdrop-filter:blur(10px); z-index:1000;">
+  <div style="max-width:1100px; width:90%; max-height:80vh; overflow:auto;
+              background:rgba(15,15,20,0.95); border-radius:18px;
+              border:1px solid rgba(255,255,255,0.12); padding:16px 18px; color:#f5f5f7;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+      <div style="font-weight:700; font-size:16px;">Preview masks</div>
+      <div style="flex:1 1 auto;"></div>
+      <span style="color:#a3a3aa; font-size:13px;">Check if the masks look okay before continuing.</span>
+    </div>
+    <div id="previewGrid" style="
+            display:flex; flex-direction:column; gap:10px;
+            margin-bottom:12px;">
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:10px;">
+      <button id="restartBtn" class="btn-ghost btn" type="button">Start over</button>
+      <button id="confirmBtn" class="btn-primary btn" type="button">Looks good, continue</button>
+    </div>
+  </div>
+</div>
+
+<div id="loadingOverlay" style="
+  position:fixed; inset:0;
+  display:none;
+  align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.55);
+  backdrop-filter:blur(10px);
+  z-index:900;">
+  <div style="
+      display:flex; flex-direction:column; align-items:center; gap:10px;
+      padding:16px 18px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.2);
+      background:rgba(15,15,20,0.96);
+      color:#f5f5f7;">
+    
+    <!-- Bouncing dots row -->
+    <div style="display:flex; gap:6px; align-items:center; justify-content:center;">
+      <div class="dot-bounce" style="
+          width:8px; height:8px; border-radius:50%;
+          background:#0a84ff; animation-delay:0s;"></div>
+      <div class="dot-bounce" style="
+          width:8px; height:8px; border-radius:50%;
+          background:#0a84ff; animation-delay:0.12s;"></div>
+      <div class="dot-bounce" style="
+          width:8px; height:8px; border-radius:50%;
+          background:#0a84ff; animation-delay:0.24s;"></div>
+    </div>
+
+    <div id="loadingLabel" style="font-weight:600; font-size:14px;">
+      Generating preview…
+    </div>
+  </div>
+</div>
+
+<div id="doneOverlay" style="
+  position:fixed; inset:0;
+  display:none;
+  align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.55);
+  backdrop-filter:blur(10px);
+  z-index:1100;">
+  <div style="
+      max-width:460px; width:90%;
+      padding:18px 20px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,0.18);
+      background:rgba(15,15,20,0.97);
+      color:#f5f5f7;
+      box-shadow:0 30px 80px rgba(0,0,0,0.55);">
+
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+      <div style="
+          width:24px; height:24px; border-radius:999px;
+          display:flex; align-items:center; justify-content:center;
+          background:rgba(52,199,89,0.16);">
+        <div style="
+            width:10px; height:10px; border-radius:50%;
+            background:#34c759; box-shadow:0 0 0 5px rgba(52,199,89,0.32);">
+        </div>
+      </div>
+      <div style="font-weight:700; font-size:16px;">All set</div>
+    </div>
+
+    <div style="font-size:14px; color:#d1d1d6; margin-bottom:14px;">
+      Your prompts have been saved and the pipeline can continue.
+      You can safely close this tab and go back to the terminal.
+    </div>
+
+    <div style="display:flex; justify-content:flex-end;">
+      <button type="button"
+              onclick="document.getElementById('doneOverlay').style.display='none';"
+              class="btn-ghost btn"
+              style="min-width:110px; text-align:center;">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+
+
+
 <script>
 /* --------------------------- State & DOM refs --------------------------- */
 const frames   = {{ frames|tojson }};
@@ -367,6 +486,17 @@ let spaceDown = false;
 /* small ripple animation on click */
 const ripples = [];
 function addRipple(wx, wy, color){ ripples.push({x:wx, y:wy, r:0, color, alpha:0.35}); }
+const loadingOverlay = document.getElementById('loadingOverlay');
+const loadingLabel   = document.getElementById('loadingLabel');
+
+function setLoading(on, msg = 'Generating preview…') {
+  if (loadingOverlay) {
+    loadingOverlay.style.display = on ? 'flex' : 'none';
+  }
+  if (loadingLabel && msg) {
+    loadingLabel.textContent = msg;
+  }
+}
 
 /* ----------------------------- Init & Fit ------------------------------ */
 function loadFrame0(){
@@ -508,19 +638,195 @@ function clearAll(){ if (confirm('Clear all points?')){ points[0] = []; redraw()
 
 // Save
 function showToast(msg="Saved"){ toast.textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1300); }
+const previewModal = document.getElementById('previewModal');
+const previewGrid  = document.getElementById('previewGrid');
+const doneOverlay  = document.getElementById('doneOverlay');
+
+
 async function save(){
   const payload = { points };
+  showToast('Generating preview…');
+  setLoading(true, 'Generating preview…');
+
   try{
-    const r = await fetch('/save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-    if (r.ok){ showToast('Saved'); } else { showToast('Save failed'); alert('Save failed: ' + await r.text()); }
-  }catch(err){ showToast('Save failed'); alert('Save failed: ' + err); }
+    const r = await fetch('/save', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+
+    if (!r.ok){
+      showToast('Save failed');
+      alert('Save failed: ' + await r.text());
+      return;
+    }
+
+    const data = await r.json();
+    if (!data.ok){
+      showToast('Save failed');
+      alert('Save failed: ' + (data.error || 'Unknown error'));
+      return;
+    }
+
+    // data.previews = ["/preview/....png", ...]
+    const previews = data.previews || [];
+        if (!previews.length){
+          showToast('No preview generated');
+          alert('No preview images generated. Check the backend preview logic.');
+          return;
+        }
+
+
+        const main = previews[0];
+        const thumbs = previews.slice(1);  // random 5
+
+        let html = "";
+
+    
+        html += `
+          <div style="border-radius:14px; overflow:hidden;
+                      border:1px solid rgba(255,255,255,0.18);
+                      background:#000;">
+            <img src="${main}"
+                style="display:block; width:100%; max-height:420px;
+                        object-fit:contain;">
+          </div>
+        `;
+
+        
+        if (thumbs.length){
+          html += `
+            <div style="display:flex; flex-wrap:wrap; gap:10px;">
+              ${thumbs.map(url => `
+                <div style="flex:1 1 160px; max-width:220px;
+                            border-radius:12px; overflow:hidden;
+                            border:1px solid rgba(255,255,255,0.12);
+                            background:#000;">
+                  <img src="${url}" style="display:block; width:100%; height:auto;">
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+
+    previewGrid.innerHTML = html;
+
+
+    // Show modal
+    previewModal.style.display = 'flex';
+    setLoading(false);
+    showToast('Preview ready');
+
+
+  }catch(err){
+    setLoading(false);
+    showToast('Save failed');
+    alert('Save failed: ' + err);
+  }
 }
+document.getElementById('confirmBtn').addEventListener('click', async () => {
+  try{
+    const r = await fetch('/confirm', { method:'POST' });
+    const data = await r.json();
+    if (!r.ok || !data.ok){
+      alert('Failed to confirm: ' + (data.error || 'unknown'));
+      return;
+    }
+   
+    previewModal.style.display = 'none';
+    showToast('Confirmed');
+    doneOverlay.style.display = 'flex';
+  }catch(err){
+    alert('Failed to confirm: ' + err);
+  }
+});
+
+document.getElementById('restartBtn').addEventListener('click', async () => {
+  if (!confirm('Discard these prompts and start over?')) return;
+  try{
+    const r = await fetch('/restart', { method:'POST' });
+    const data = await r.json();
+    if (!r.ok || !data.ok){
+      alert('Failed to restart: ' + (data.error || 'unknown'));
+      return;
+    }
+    showToast('Restarted');
+    previewModal.style.display = 'none';
+    // Clear all points locally too
+    points[0] = [];
+    redraw();
+  }catch(err){
+    alert('Failed to restart: ' + err);
+  }
+});
+
+
 
 // Start
 function tick(){ requestAnimationFrame(tick); if (ripples.length) redraw(); }
 tick(); loadFrame0();
+
 </script>
 """
+DONE_HTML = """
+  <!doctype html><meta charset="utf-8">
+  <title>Point Picker — {{ds}}</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <style>
+    :root{
+      --bg: #0b0b0d; --ink:#f5f5f7; --muted:#a3a3aa;
+      --card: rgba(22,22,24,0.66); --border: rgba(255,255,255,0.08);
+      --accent:#0a84ff; --shadow: 0 30px 80px rgba(0,0,0,0.45); --glass: saturate(180%) blur(22px);
+    }
+    @media (prefers-color-scheme: light){
+      :root{ --bg:#f5f5f7; --ink:#0b0b0d; --muted:#6e6e73; --card:rgba(255,255,255,0.72); --border:rgba(0,0,0,0.08); --shadow:0 30px 70px rgba(0,0,0,0.12); }
+    }
+    *{ box-sizing:border-box }
+    html,body{ height:100%; }
+    body{
+      margin:0; color:var(--ink);
+      background:
+        radial-gradient(1200px 800px at 10% -10%, rgba(10,132,255,0.14), transparent 60%),
+        radial-gradient(1000px 700px at 120% 110%, rgba(94,92,230,0.14), transparent 60%),
+        var(--bg);
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,Helvetica,Arial;
+      display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .card{
+      max-width:560px; width:100%;
+      border-radius:18px; border:1px solid var(--border);
+      background:var(--card); backdrop-filter:var(--glass); box-shadow:var(--shadow);
+      padding:18px 20px; display:flex; flex-direction:column; gap:10px;
+    }
+    .title{ font-weight:800; font-size:18px; letter-spacing:.2px; }
+    .muted{ color:var(--muted); }
+    .badge{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--border);
+            border-radius:999px; background:rgba(255,255,255,0.06); color:var(--muted); font-weight:600; }
+    .dot-ok{
+      width:10px; height:10px; border-radius:50%;
+      background:#34c759; box-shadow:0 0 0 5px rgba(52,199,89,0.25);
+    }
+    .files{ margin-top:6px; font-size:13px; color:var(--muted); }
+    .files div{ margin:2px 0; }
+  </style>
+
+  <div class="card">
+    <div class="badge">
+      <span class="dot-ok"></span> Using existing prompts
+    </div>
+    <div class="title">You’re good to go ✅</div>
+    <div class="muted">
+      The existing <code>prompts.json</code> for <strong>{{ds}}</strong> will be used.
+      You can now close this tab and return to the terminal.
+    </div>
+
+    <div class="files">
+      <div><strong>PROMPTS_JSON:</strong> {{prompts}}</div>
+      <div><strong>DONE_FLAG:</strong> {{done}}</div>
+      <div><strong>USE_EXISTING:</strong> {{use_existing}}</div>
+    </div>
+  </div>
+  """
 
 # =============================================================================
 # App & Utilities
@@ -555,6 +861,53 @@ def resolve_frames() -> List[str]:
 
 
 FRAMES: List[str] = resolve_frames()
+def run_preview_masks(num_frames: int = 6) -> List[str]:
+    """
+    Run a small SAM2 preview:
+      - reads prompts.json in OUT_ROOT
+      - runs segmentation/propagation on a few frames
+      - writes color cutouts into PREVIEW_DIR
+
+    Returns: list of filenames (just the name, e.g. "000000.jpg").
+    """
+
+    # Clear previous previews
+    for f in PREVIEW_DIR.glob("*"):
+        try:
+            f.unlink()
+        except Exception:
+            pass
+
+    cmd = [
+        "python3",
+        "app/video_predict.py",
+        "--preview",
+        "--preview-num-frames", str(num_frames),
+        "--preview-out", str(PREVIEW_DIR),
+    ]
+
+    
+    env = os.environ.copy()
+    env["QUIET"] = "0"
+
+    try:
+        print(f"[preview] running: {' '.join(cmd)}  -> {PREVIEW_DIR}", flush=True)
+        subprocess.run(cmd, check=True, env=env)
+    except subprocess.CalledProcessError as e:
+        print(f"[preview] video_predict.py failed: {e}", flush=True)
+        return []
+
+    # Collect the files that were written into PREVIEW_DIR
+    previews: List[str] = []
+    for ext in ("*.png", "*.jpg", "*.jpeg", "*.PNG", "*.JPG", "*.JPEG"):
+        for f in sorted(PREVIEW_DIR.glob(ext)):
+            previews.append(f.name)   
+
+    print(f"[preview] found {len(previews)} preview files", flush=True)
+    return previews
+
+
+
 
 
 def _json_ok(**payload: Any):
@@ -590,12 +943,19 @@ def home():
 @app.post("/use_existing")
 def use_existing():
     """
-    Signal the runner that we want to use the already-saved prompts.json.
-    Creates both USE_EXISTING and DONE_FLAG.
+    User chose to reuse existing prompts.json.
+    We set USE_EXISTING + DONE_FLAG and show a nice “done” screen.
     """
     USE_EXISTING.touch()
     DONE_FLAG.touch()
-    return _json_ok(msg="using existing")
+    return render_template_string(
+        DONE_HTML,
+        ds=DS_NAME,
+        prompts=str(PROMPTS_JSON),
+        done=str(DONE_FLAG),
+        use_existing=str(USE_EXISTING),
+    )
+
 
 
 @app.post("/create_new")
@@ -627,28 +987,27 @@ def pick():
     )
 
 
-@app.get("/frame")
-def frame():
+@app.get("/preview/<path:name>")
+def preview_image(name: str):
     """
-    Serve a frame image by index (0-based) from the discovered list.
+    Serve preview masked images from PREVIEW_DIR.
     """
-    if not FRAMES:
-        return _json_err("No frames discovered.", http=404)
-    try:
-        i = int(request.args.get("i", 0))
-    except ValueError:
-        i = 0
-    i = max(0, min(i, len(FRAMES) - 1))
-    fp = Path(FRAMES[i])
-    return send_from_directory(fp.parent, fp.name)
+    fp = PREVIEW_DIR / name
+    if not fp.is_file():
+        return _json_err("Preview image not found", http=404)
+    return send_from_directory(PREVIEW_DIR, fp.name)
+
 
 
 @app.post("/save")
 def save():
     """
-    Persist prompts.json in the indexed output directory.
-    We only store annotations for frame 0 to match the expected pipeline
-    (obj_id=1, labels/points, and image size metadata).
+    Persist prompts.json in the indexed output directory AND
+    run a small SAM2 preview on a few frames.
+
+    Important:
+      - We DO NOT create DONE_FLAG here anymore.
+      - DONE_FLAG will be created only in /confirm when the user accepts the preview.
     """
     if not FRAMES:
         return _json_err("No frames found", http=400)
@@ -693,10 +1052,65 @@ def save():
                 indent=2,
             )
 
-        DONE_FLAG.touch()
-        return _json_ok(path=str(PROMPTS_JSON))
+        # --- NEW: run preview masks on 1+5 frames ---
+        preview_files = run_preview_masks(num_frames=6)
+        preview_urls = [f"/preview/{name}" for name in preview_files]
+
+        # DO NOT touch DONE_FLAG here; we wait for /confirm
+        return _json_ok(path=str(PROMPTS_JSON), previews=preview_urls)
+
     except Exception as e:
         return _json_err(str(e), http=500)
+
+@app.post("/confirm")
+def confirm():
+    """
+    User accepted the preview: signal the runner to continue by
+    creating DONE_FLAG.
+    """
+    try:
+        DONE_FLAG.touch()
+        return _json_ok(msg="confirmed")
+    except Exception as e:
+        return _json_err(str(e), http=500)
+
+
+@app.post("/restart")
+def restart():
+    """
+    User rejected the preview: delete prompts and previews,
+    so they can click new points.
+    """
+    try:
+        PROMPTS_JSON.unlink(missing_ok=True)
+        for f in PREVIEW_DIR.glob("*"):
+            try:
+                f.unlink()
+            except Exception:
+                pass
+        # Also ensure flags are clean
+        DONE_FLAG.unlink(missing_ok=True)
+        USE_EXISTING.unlink(missing_ok=True)
+        return _json_ok(msg="restarted")
+    except Exception as e:
+        return _json_err(str(e), http=500)
+
+@app.get("/frame")
+def frame():
+    """
+    Serve a source frame image by index (used by the canvas).
+    """
+    i_str = request.args.get("i", "0")
+    try:
+        idx = int(i_str)
+    except ValueError:
+        return _json_err("Invalid frame index", http=400)
+
+    if idx < 0 or idx >= len(FRAMES):
+        return _json_err("Frame index out of range", http=404)
+
+    fp = Path(FRAMES[idx])
+    return send_from_directory(fp.parent, fp.name)
 
 
 # =============================================================================
