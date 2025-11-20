@@ -1,6 +1,6 @@
 # nephele
 <p align="center">
-  <img src="readme_images/nephele_logo_2.png" alt="Pipeline Image" width="600"/>
+  <img src="readme_images/nephele_logo_2.png" alt="Pipeline Image" width="400"/>
 </p>
 
 
