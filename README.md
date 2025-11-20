@@ -1,11 +1,15 @@
 # nephele
+<p align="center">
+  <img src="readme_images/nephele_logo_2.png" alt="Pipeline Image" width="600"/>
+</p>
+
 
 "nephele" is a system that processes images to generate 3D meshes without backgrounds. By combining **SAM2** (Surface-Aligned Mesh) and **SUGAR** (Surface-Aligned Gaussian Splatting), it aligns surfaces and creates efficient 3D models, perfect for applications requiring clean, background-free reconstructions.
 #### Pipeline:
 
 
 <p align="center">
-  <img src="readme_images/pipeline_nephele.png" alt="Pipeline Image" width="600"/>
+  <img src="readme_images/pipeline_SAMplify_SuGaR.png" alt="Pipeline Image" width="600"/>
 </p>
 
 ## Quick Start
@@ -190,3 +194,6 @@ Finally, the SuGaR output is converted to a **Poisson mesh** and textured.
 
 For more details, check the documentation in the repository or the command line help.
 
+
+# NEPHELE
+NEPHELE is a system that processes images to generate 3D meshes without backgrounds. By combining SAM2 (Surface-Aligned Mesh) and SUGAR (Surface-Aligned Gaussian Splatting), it aligns surfaces and creates efficient 3D models, perfect for applications requiring clean, background-free reconstructions.
