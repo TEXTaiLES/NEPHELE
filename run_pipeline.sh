@@ -7,10 +7,10 @@ DATASET_NAME="${DATASET_NAME:-${1:-}}"
 
 # ====== PATHS ======
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SAMplify_SuGaR_PATH="${SAMplify_SuGaR_PATH:-$SCRIPT_DIR}"
-SAM2_PATH="${SAM2_PATH:-${SAMplify_SuGaR_PATH}/SAM2}"
-SUGAR_PATH="${SUGAR_PATH:-${SAMplify_SuGaR_PATH}/SUGAR/SuGaR}"
-COLMAP_OUT_PATH="${COLMAP_OUT_PATH:-${SAMplify_SuGaR_PATH}/colmap}"
+nephele_PATH="${nephele_PATH:-$SCRIPT_DIR}"
+SAM2_PATH="${SAM2_PATH:-${nephele_PATH}/SAM2}"
+SUGAR_PATH="${SUGAR_PATH:-${nephele_PATH}/SUGAR/SuGaR}"
+COLMAP_OUT_PATH="${COLMAP_OUT_PATH:-${nephele_PATH}/colmap}"
 
 # Where SAM2 expects input/output INSIDE the container:
 IN_MNT_HOST="$SAM2_PATH/data/input"
@@ -23,7 +23,7 @@ INPUT_SUBDIR="${INPUT_SUBDIR:-$DATASET_NAME}"
 INPUT_CONT="$IN_MNT_CONT/$INPUT_SUBDIR"
 
 # ====== LOGGING ======
-LOGDIR="$SAMplify_SuGaR_PATH/logs"
+LOGDIR="$nephele_PATH/logs"
 mkdir -p "$LOGDIR"
 LOGFILE="$LOGDIR/${DATASET_NAME}_$(date +%Y%m%d_%H%M%S).log"
 exec >>"$LOGFILE" 2>&1
@@ -199,7 +199,7 @@ $DOCKER_BIN pull colmap/colmap
 if [ -f "$COLMAP_OUT_PATH/run_colmap.sh" ]; then
   chmod +x "$COLMAP_OUT_PATH/run_colmap.sh"
 else
-  echo "[*] run_colmap.sh not found in $SAMplify_SuGaR_PATH (skipping copy)"
+  echo "[*] run_colmap.sh not found in $nephele_PATH (skipping copy)"
 fi
 cd "$COLMAP_OUT_PATH"
 
@@ -246,21 +246,21 @@ bash "$COLMAP_OUT_PATH/run_colmap.sh" \
   exhaustive
 
 # --- optionally stage helper files ---
-if [ -f "$SAMplify_SuGaR_PATH/run_sugar_pipeline_with_sam.sh" ]; then
+if [ -f "$nephele_PATH/run_sugar_pipeline_with_sam.sh" ]; then
   echo "[*] Copying run_sugar_pipeline_with_sam.sh to $SUGAR_PATH"
-  cp -f "$SAMplify_SuGaR_PATH/run_sugar_pipeline_with_sam.sh" "$SUGAR_PATH"
+  cp -f "$nephele_PATH/run_sugar_pipeline_with_sam.sh" "$SUGAR_PATH"
   chmod +x "$SUGAR_PATH/run_sugar_pipeline_with_sam.sh"
 else
-  echo "[*] run_sugar_pipeline_with_sam.sh not found in $SAMplify_SuGaR__PATH (skipping copy)"
+  echo "[*] run_sugar_pipeline_with_sam.sh not found in $nephele__PATH (skipping copy)"
 fi
 
-if [ -f "$SAMplify_SuGaR_PATH/Dockerfile_final" ]; then
+if [ -f "$nephele_PATH/Dockerfile_final" ]; then
   echo "[*] Copying Dockerfile and helpers to $SUGAR_PATH"
-  cp -f "$SAMplify_SuGaR_PATH/Dockerfile_final" "$SUGAR_PATH"
-  cp -f "$SAMplify_SuGaR_PATH/train.py" "$SUGAR_PATH/gaussian_splatting/"
-  cp -f "$SAMplify_SuGaR_PATH/coarse_mesh.py" "$SUGAR_PATH/sugar_extractors/coarse_mesh.py"
+  cp -f "$nephele_PATH/Dockerfile_final" "$SUGAR_PATH"
+  cp -f "$nephele_PATH/train.py" "$SUGAR_PATH/gaussian_splatting/"
+  cp -f "$nephele_PATH/coarse_mesh.py" "$SUGAR_PATH/sugar_extractors/coarse_mesh.py"
 else
-  echo "[*] Dockerfile/train.py/coarse_mesh.py not found in $SAMplify_SuGaR_PATH (skipping copy)"
+  echo "[*] Dockerfile/train.py/coarse_mesh.py not found in $nephele_PATH (skipping copy)"
 fi
 
 # --- run SUGAR (pass DATASET_NAME as env) ---
@@ -268,7 +268,7 @@ echo "[*] Running Sugar pipeline for dataset: $DATASET_NAME..."
 cd "$SUGAR_PATH"
 DATASET_NAME="$DATASET_NAME" \
 SUGAR_PATH="$SUGAR_PATH" \
-SAMplify_SuGaR__PATH="$SAMplify_SuGaR_PATH"
+nephele__PATH="$nephele_PATH"
 
 bash ./run_sugar_pipeline_with_sam.sh "$DATASET_NAME"
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGES=${1:-"$SAMplify_SuGaR_PATH/colmap/input/${DATASET_NAME}"}
-MASKS=${2:-"$SAMplify_SuGaR_PATH/colmap/input/${DATASET_NAME}_indexed"}
-OUT=${3:-"$SAMplify_SuGaR_PATH/colmap/output/${DATASET_NAME}"}
+IMAGES=${1:-"$nephele_PATH/colmap/input/${DATASET_NAME}"}
+MASKS=${2:-"$nephele_PATH/colmap/input/${DATASET_NAME}_indexed"}
+OUT=${3:-"$nephele_PATH/colmap/output/${DATASET_NAME}"}
 MATCHER=${4:-exhaustive}  # or "sequential"
 
 

@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUGAR_PATH="${SUGAR_PATH:-$SCRIPT_DIR}"
 
 # Monorepo root is two levels up from SuGaR (…/SUGAR/SuGaR -> …/)
-MONO_ROOT="${SAMplify_SuGaR_PATH:-$(cd "$SUGAR_PATH/../.." && pwd)}"
+MONO_ROOT="${nephele_PATH:-$(cd "$SUGAR_PATH/../.." && pwd)}"
 
 # Other components relative to repo root (can be overridden from env)
 SAM2_PATH="${SAM2_PATH:-$MONO_ROOT/SAM2}"

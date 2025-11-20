@@ -1,8 +1,8 @@
-# SAMplify_SuGaR — Detailed Technical Documentation
+# nephele — Detailed Technical Documentation
 
 ## Overview
 
-SAMplify_SuGaR is a two-stage image-to-3D pipeline that combines interactive 2D segmentation (SAM2) with GPU-accelerated Gaussian-splatting reconstruction (SuGaR). The goal is to produce clean, background-free 3D geometry from photographic datasets with minimal manual effort: precise foreground masks are generated with SAM2 and are converted to dense, continuous 3D meshes by SuGaR.
+nephele is a two-stage image-to-3D pipeline that combines interactive 2D segmentation (SAM2) with GPU-accelerated Gaussian-splatting reconstruction (SuGaR). The goal is to produce clean, background-free 3D geometry from photographic datasets with minimal manual effort: precise foreground masks are generated with SAM2 and are converted to dense, continuous 3D meshes by SuGaR.
 
 This document describes architecture, data flow, installation, configuration, usage examples, internals, recommended parameters, troubleshooting, and future improvements.
 
@@ -59,9 +59,9 @@ images → preprocessing → SAM2 annotation → masks → point sampling → sp
 
 ## 3. Data Formats and Directory Layout
 
-Recommended repository layout (root = $SAMPLIFY_SUGAR_PATH):
+Recommended repository layout (root = $nephele_PATH):
 
-SAMplify_SuGaR/
+nephele/
 - data/
   - datasets/
     - <dataset_name>/
@@ -106,8 +106,8 @@ File conventions (brief):
 Replace `<repo-url>` with the URL for this repository and clone it to your machine:
 
 ```bash
-git clone <repo-url> $SAMPLIFY_SUGAR_PATH
-cd $SAMPLIFY_SUGAR_PATH
+git clone <repo-url> $nephele_PATH
+cd $nephele_PATH
 ```
 
 
@@ -138,13 +138,13 @@ If using GUI-based SAM2 UIs, ensure X11 socket and DISPLAY forwarded and that ho
 
 Set environment variables used by scripts/wrappers:
 
-- SAMPLIFY_SUGAR_PATH — path to the project root (absolute).
+- nephele_PATH — path to the project root (absolute).
 
 
 Example:
 
 ```bash
-export SAM_FIT_SUGAR_PATH="/home/you/SAMplify_SuGaR"
+export SAM_FIT_SUGAR_PATH="/home/you/nephele"
 
 ```
 

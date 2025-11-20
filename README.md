@@ -5,7 +5,7 @@
 
 
 <p align="center">
-  <img src="readme_images/pipeline_SAMplify_SuGaR.png" alt="Pipeline Image" width="600"/>
+  <img src="readme_images/pipeline_nephele.png" alt="Pipeline Image" width="600"/>
 </p>
 
 ## Quick Start
@@ -17,7 +17,7 @@ To get started with this project, follow these simple steps:
 Run the following command to clone the repository to your local machine:
 
 ```bash
-git clone --recurse-submodules https://gitlab.com/ilsp-xanthi-medialab/textailes/wp4/t4.5/samplify_sugar.git
+git clone --recurse-submodules https://gitlab.com/ilsp-xanthi-medialab/textailes/wp4/t4.5/nephele.git
 # If you forgot --recurse-submodules:
 git submodule update --init --recursive
 ```
@@ -27,7 +27,7 @@ git submodule update --init --recursive
 After cloning, go to the project folder:
 
 ```bash
-cd SAMplify_SuGaR
+cd nephele
 ```
 
 
@@ -77,10 +77,10 @@ Before running the pipeline, you need to set up the environment variables for th
 Set the paths for **sam_fit_sugar**  by adding this line to your terminal:
 
 ```bash
-export SAMPLIFY_SUGAR_PATH="/path/to/SAMPLIFY_SUGAR_PAT"
+export nephele_PATH="/path/to/nephele_PAT"
 ```
 
-Make sure to replace `"/path/to/SAMPLIFY_SUGAR_PAT"` with the correct path where the repositorie is located on your system.
+Make sure to replace `"/path/to/nephele_PAT"` with the correct path where the repositorie is located on your system.
 
 ### 5. Run the pipeline
 
