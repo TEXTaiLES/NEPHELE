@@ -199,7 +199,9 @@ For more details, check the documentation in the repository or the command line 
 NEPHELE is a system that processes images to generate 3D meshes without backgrounds. By combining SAM2 and SUGAR (Surface-Aligned Gaussian Splatting), it aligns surfaces and creates efficient 3D models, perfect for applications requiring clean, background-free reconstructions.
 
 
+
 ---
+
 ## Citation
 If you use this software, please cite it using the following BibTeX entry:
 
@@ -212,10 +214,11 @@ If you use this software, please cite it using the following BibTeX entry:
   year    = {2025},
   license = {MIT}
 }
+```
 
+## Third-party citations
 
-# Third-party citations
-
+```bibtex
 @article{ravi2024sam2,
   title={SAM 2: Segment Anything in Images and Videos},
   author={Ravi, Nikhila and Gabeur, Valentin and Hu, Yuan-Ting and Hu, Ronghang and Ryali, Chaitanya and Ma, Tengyu and Khedr, Haitham and R{\"a}dle, Roman and Rolland, Chloe and Gustafson, Laura and Mintun, Eric and Pan, Junting and Alwala, Kalyan Vasudev and Carion, Nicolas and Wu, Chao-Yuan and Girshick, Ross and Doll{\'a}r, Piotr and Feichtenhofer, Christoph},
@@ -244,3 +247,8 @@ If you use this software, please cite it using the following BibTeX entry:
   journal = {ACM Transactions on Graphics},
   year    = {2023}
 }
+```
+
+## License
+This project is licensed under the MIT License. 
+
