@@ -15,7 +15,7 @@ Design goals:
 """
 
 from __future__ import annotations
-
+from auth import init_auth
 import json
 import glob
 import os
@@ -24,7 +24,10 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Any
 
 
-from flask import Flask, request, redirect, render_template_string, send_from_directory, jsonify
+from flask import Flask, request, redirect, render_template_string, send_from_directory, jsonify, url_for
+from flask import make_response
+
+
 
 
 # =============================================================================
@@ -833,6 +836,9 @@ DONE_HTML = """
 # =============================================================================
 
 app = Flask(__name__)
+init_auth(app) 
+
+
 
 
 def gather_frames(dir_path: Path | str) -> List[str]:
@@ -890,6 +896,8 @@ def run_preview_masks(num_frames: int = 6) -> List[str]:
     env = os.environ.copy()
     env["QUIET"] = "0"
 
+
+
     try:
         print(f"[preview] running: {' '.join(cmd)}  -> {PREVIEW_DIR}", flush=True)
         subprocess.run(cmd, check=True, env=env)
@@ -922,10 +930,11 @@ def _json_err(msg: str, http: int = 400):
 # Routes
 # =============================================================================
 
+
 @app.route("/")
 def home():
     """
-    Home (Apple-like) — shows dataset name, frame count, and actions:
+    Home  — shows dataset name, frame count, and actions:
     - Use existing prompts.json (if present)
     - Create new (opens picker)
     """
@@ -977,6 +986,7 @@ def pick():
     Interactive picker view (Apple-like).
     Loads only the list of frames to show the first image.
     """
+
     names = [Path(p).name for p in FRAMES]
     return render_template_string(
         PICK_HTML,
@@ -1067,7 +1077,7 @@ def confirm():
     """
     User accepted the preview: signal the runner to continue by
     creating DONE_FLAG.
-    """
+    """ 
     try:
         DONE_FLAG.touch()
         return _json_ok(msg="confirmed")
@@ -1119,4 +1129,4 @@ def frame():
 
 if __name__ == "__main__":
     # NOTE: Keep debug=False for Docker usage; change locally if desired.
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=True)

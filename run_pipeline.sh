@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # ====== ARGS / DATASET ======
-DATASET_NAME="${DATASET_NAME:-${1:-}}"
-: "${DATASET_NAME:?Usage: $0 DATASET_NAME  (or export DATASET_NAME first)}"
+DATASET_NAME="${1:?Usage: $0 DATASET_NAME}"
+export DATASET_NAME
 
 # ====== PATHS ======
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,6 +29,45 @@ LOGDIR="$nephele_PATH/logs"
 mkdir -p "$LOGDIR"
 LOGFILE="$LOGDIR/${DATASET_NAME}_$(date +%Y%m%d_%H%M%S).log"
 exec >>"$LOGFILE" 2>&1
+
+# ---- SAM2 internal logs (inside container) ----
+SAM2_PICKER_LOG_CONT="/workspace/logs/picker_${DATASET_NAME}.log"
+SAM2_PROP_LOG_CONT="/workspace/logs/propagate_${DATASET_NAME}.log"  
+TAIL_PIDS=()
+start_sam2_log_tails() {
+  # Tail picker log from inside container into our host LOGFILE
+  $DOCKER_BIN compose exec -T sam2 bash -lc "
+    mkdir -p /workspace/logs
+    touch '$SAM2_PICKER_LOG_CONT'
+    stdbuf -oL -eL tail -n 0 -F '$SAM2_PICKER_LOG_CONT'
+  " 2>/dev/null | stdbuf -oL -eL sed 's/^/[SAM2:picker] /' >>"$LOGFILE" &
+  TAIL_PIDS+=($!)
+
+  # Tail propagation log too (we'll write to it with tee)
+  $DOCKER_BIN compose exec -T sam2 bash -lc "
+    mkdir -p /workspace/logs
+    touch '$SAM2_PROP_LOG_CONT'
+    stdbuf -oL -eL tail -n 0 -F '$SAM2_PROP_LOG_CONT'
+  " 2>/dev/null | stdbuf -oL -eL sed 's/^/[SAM2:prop] /' >>"$LOGFILE" &
+  TAIL_PIDS+=($!)
+}
+
+stop_sam2_log_tails() {
+  for pid in "${TAIL_PIDS[@]:-}"; do
+    kill "$pid" >/dev/null 2>&1 || true
+  done
+  TAIL_PIDS=()
+}
+
+on_error() {
+  stop_sam2_log_tails || true
+  echo "STATUS: ERROR"
+  echo "LOG: $LOGFILE"
+  exit 1
+}
+trap on_error ERR
+trap stop_sam2_log_tails EXIT
+
 
 on_error() {
   echo "STATUS: ERROR"
@@ -197,7 +236,11 @@ else
   "
 fi
 
+echo "[*] Attaching SAM2 logs into: $LOGFILE"
+start_sam2_log_tails
+
 echo "[*] Open to select points: http://localhost:${WEB_PORT}/" | tee /dev/tty
+
 
 echo "[*] Waiting for decision/save → $DONE_FLAG"
 while :; do

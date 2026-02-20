@@ -50,6 +50,10 @@ RUN pip install --no-cache-dir --upgrade setuptools wheel
 RUN pip install --no-cache-dir --no-build-isolation .
 
 RUN pip install --no-cache-dir flask==3.0.3
+RUN pip install --no-cache-dir python-dotenv
+RUN pip install flask-login
+RUN pip install requests 
+
 
 # ---------- Switch to non-root user and set HOME-aware env ----------
 USER ${UNAME}

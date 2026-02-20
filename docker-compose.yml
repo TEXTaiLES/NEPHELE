@@ -23,6 +23,7 @@ services:
     gpus: all
     ports:
       - "${WEB_PORT:-8092}:5000"
+      
     # If DATASET_NAME is provided in the environment, run the Flask picker on container start.
     # Otherwise keep the container alive (so `run_pipeline.sh` can start the picker later).
     # Example: DATASET_NAME=dress WEB_PORT=8092 HOST_UID=$(id -u) HOST_GID=$(id -g) \
@@ -30,7 +31,9 @@ services:
     command: ["sh", "-c", "if [ -n \"$DATASET_NAME\" ]; then exec python3 -u /workspace/app/point_picker_flask.py; else exec tail -f /dev/null; fi"]
     # Run container processes as the host user by default to avoid permission issues
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
-    restart: unless-stopped
+    # restart: unless-stopped
+    restart: "no"
+
 
   colmap:
     image: colmap/colmap:latest
@@ -43,7 +46,9 @@ services:
     working_dir: /workspace
     # keep the container alive and use `docker compose exec` to run COLMAP steps
     command: ["tail", "-f", "/dev/null"]
-    restart: unless-stopped
+    # restart: unless-stopped
+    restart: "no"
+
 
   sugar:
     build:
@@ -64,4 +69,6 @@ services:
     command: ["tail", "-f", "/dev/null"]
     env_file:
       - .env
-    restart: unless-stopped
+    # restart: unless-stopped
+    restart: "no"
+
