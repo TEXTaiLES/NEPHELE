@@ -5,13 +5,12 @@ from urllib.parse import quote
 from flask import request, redirect, g , make_response
 
 
-# --- Directus API base ---
+# --- Directus API base για refresh ---
 DIRECTUS_URL = "https://textailes.athenarc.gr"
 
 
-# --- Cookie name ---
+# --- Cookie name που κρατάει το refresh token ---
 COOKIE_NAME = "textailes_refresh_token"
-
 
 LOGIN_URL = "https://textailes.athenarc.gr/archive/user/login"
 APP_BASE  = "http://nephele.textailes.athenarc.gr:8093"  

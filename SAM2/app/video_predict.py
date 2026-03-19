@@ -181,12 +181,15 @@ def run_sam2(preview=False, preview_num_frames=6, preview_out=None):
 
     os.makedirs(OUT_MASKED_DIR, exist_ok=True)
 
-    PROMPTS_JSON = os.path.join(OUT_DIR, "prompts.json")
+    # PROMPTS_JSON = os.path.join(OUT_DIR, "prompts.json")
+    # if not os.path.isfile(PROMPTS_JSON):
+    #     raise FileNotFoundError(
+    #         f"prompts.json not found at {PROMPTS_JSON}. "
+    #         f"Run the web point picker first and press 'Save'."
+    #     )
+    PROMPTS_JSON = os.environ.get("PROMPTS_JSON", os.path.join(OUT_DIR, "prompts.json"))
     if not os.path.isfile(PROMPTS_JSON):
-        raise FileNotFoundError(
-            f"prompts.json not found at {PROMPTS_JSON}. "
-            f"Run the web point picker first and press 'Save'."
-        )
+        raise FileNotFoundError(f"prompts.json not found at {PROMPTS_JSON}. Run the web point picker first and press 'Save'.")
 
     with open(PROMPTS_JSON, "r") as f:
         J = json.load(f)

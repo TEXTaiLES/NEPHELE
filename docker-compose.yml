@@ -16,11 +16,12 @@ services:
       - INDEX_SUFFIX=_indexed
       - HF_HOME=/data/out/.cache/huggingface
       - XDG_CACHE_HOME=/data/out/.cache
+      - CUDA_VISIBLE_DEVICES=2
     env_file:
       - .env
     working_dir: /workspace
     # request all GPUs for SAM2
-    gpus: all
+    gpus: all  # disabled for CPU-only runs; uncomment to re-enable GPUs
     ports:
       - "${WEB_PORT:-8092}:5000"
       
@@ -36,17 +37,14 @@ services:
 
 
   colmap:
-    image: colmap/colmap:latest
+    image: graffitytech/colmap:3.8-cpu-ubuntu22.04
     container_name: colmap
     volumes:
       - ./colmap:/workspace
-      # optional: expose input/output dirs explicitly for clarity
       - ./colmap/input:/workspace/input:rw
       - ./colmap/output:/workspace/output:rw
     working_dir: /workspace
-    # keep the container alive and use `docker compose exec` to run COLMAP steps
     command: ["tail", "-f", "/dev/null"]
-    # restart: unless-stopped
     restart: "no"
 
 
@@ -58,17 +56,14 @@ services:
     container_name: sugar
     volumes:
       - ./SUGAR/SuGaR:/workspace
-      - ./data:/workspace/data
-      - ./logs:/workspace/logs
+      # - ./data:/app/data
+      # - ./logs:/app/logs
     environment:
       - DATASET_NAME=${DATASET_NAME}
+      - CUDA_VISIBLE_DEVICES=2
     working_dir: /workspace
-    # request GPUs for SuGaR if available
     gpus: all
-    # keep the container alive; run pipeline steps with `docker compose exec` or `docker compose run`
     command: ["tail", "-f", "/dev/null"]
     env_file:
       - .env
-    # restart: unless-stopped
     restart: "no"
-

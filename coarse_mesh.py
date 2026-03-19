@@ -40,8 +40,8 @@ def extract_mesh_from_coarse_sugar(args):
     # Mesh computation parameters
     fg_bbox_factor = 0.7  # 1.
     bg_bbox_factor = 0.  # 4.
-    poisson_depth = 6  # 10 for most real scenes. 6 or 7 work well for most synthetic scenes
-    vertices_density_quantile = 0.  # 0.1 for most real scenes. 0. works well for most synthetic scenes
+    poisson_depth = 8  # 10 for most real scenes. 6 or 7 work well for most synthetic scenes
+    vertices_density_quantile = 0.1  # 0.1 for most real scenes. 0. works well for most synthetic scenes
     decimate_mesh = True
     clean_mesh = True
     project_mesh_on_surface_points = args.project_mesh_on_surface_points
@@ -95,16 +95,16 @@ def extract_mesh_from_coarse_sugar(args):
         fg_bbox_min = _parse_box(args.bboxmin)
         fg_bbox_max = _parse_box(args.bboxmax)
 
-    # 2) Αν ΔΕΝ δώσαμε custom bbox, φτιάχνουμε «σφιχτό» κύβο γύρω από τις κάμερες
-    if not use_custom_bbox:
-        ext, center = sugar.get_cameras_spatial_extent(return_average_xyz=True)  # ext: scalar tensor, center: (3,)
-        fg_bbox_factor = 0.70           # πιο σφιχτό, κόβει πάτωμα/λωρίδες
-        half = fg_bbox_factor * ext     # scalar
-        fg_bbox_min_tensor = (center - half).view(1, 3)
-        fg_bbox_max_tensor = (center + half).view(1, 3)
-    else:
-        fg_bbox_min_tensor = torch.tensor(fg_bbox_min, device=sugar.device).view(1, 3)
-        fg_bbox_max_tensor = torch.tensor(fg_bbox_max, device=sugar.device).view(1, 3)
+    # # 2) Αν ΔΕΝ δώσαμε custom bbox, φτιάχνουμε «σφιχτό» κύβο γύρω από τις κάμερες
+    # if not use_custom_bbox:
+    #     ext, center = sugar.get_cameras_spatial_extent(return_average_xyz=True)  # ext: scalar tensor, center: (3,)
+    #     fg_bbox_factor = 0.70           # πιο σφιχτό, κόβει πάτωμα/λωρίδες
+    #     half = fg_bbox_factor * ext     # scalar
+    #     fg_bbox_min_tensor = (center - half).view(1, 3)
+    #     fg_bbox_max_tensor = (center + half).view(1, 3)
+    # else:
+    #     fg_bbox_min_tensor = torch.tensor(fg_bbox_min, device=sugar.device).view(1, 3)
+    #     fg_bbox_max_tensor = torch.tensor(fg_bbox_max, device=sugar.device).view(1, 3)
 
     center_bbox = False     
    
@@ -234,6 +234,21 @@ def extract_mesh_from_coarse_sugar(args):
     sugar.eval()
     
     CONSOLE.print("Coarse model loaded.")
+
+
+    # ---- NOW bbox can use sugar safely ----
+    if not use_custom_bbox:
+        ext, center = sugar.get_cameras_spatial_extent(return_average_xyz=True)
+        fg_bbox_factor = 0.70
+        half = fg_bbox_factor * ext
+        fg_bbox_min_tensor = (center - half).view(1, 3)
+        fg_bbox_max_tensor = (center + half).view(1, 3)
+    else:
+        fg_bbox_min_tensor = torch.tensor(fg_bbox_min, device=sugar.device).view(1, 3)
+        fg_bbox_max_tensor = torch.tensor(fg_bbox_max, device=sugar.device).view(1, 3)
+
+    center_bbox = False
+
     CONSOLE.print("Coarse model parameters:")
     for name, param in sugar.named_parameters():
         CONSOLE.print(name, param.shape, param.requires_grad)
@@ -383,9 +398,9 @@ def extract_mesh_from_coarse_sugar(args):
             for surface_level in surface_levels:
                 CONSOLE.print("\n========== Processing surface level", surface_level, "==========")
                 CONSOLE.print(f"Final point cloud for level {surface_level} has {len(surface_levels_outputs[surface_level]['points'])} points.")
-                # surface_points = surface_levels_outputs[surface_level]['points']
-                # surface_colors = surface_levels_outputs[surface_level]['colors']
-                # surface_normals = surface_levels_outputs[surface_level]['normals']
+                surface_points = surface_levels_outputs[surface_level]['points']
+                surface_colors = surface_levels_outputs[surface_level]['colors']
+                surface_normals = surface_levels_outputs[surface_level]['normals']
                 surface_levels_outputs[surface_level]['points'] = torch.cat([surface_levels_outputs[surface_level]['points'], surface_points[:n_pts_per_frame]], dim=0)
                 surface_levels_outputs[surface_level]['colors'] = torch.cat([surface_levels_outputs[surface_level]['colors'], surface_colors[:n_pts_per_frame]], dim=0)
                 surface_levels_outputs[surface_level]['normals'] = torch.cat([surface_levels_outputs[surface_level]['normals'], surface_normals[:n_pts_per_frame]], dim=0)
@@ -436,7 +451,7 @@ def extract_mesh_from_coarse_sugar(args):
                     fg_pcd.normals = o3d.utility.Vector3dVector(fg_normals.double().cpu().numpy())
 
                     # outliers removal
-                    cl, ind = fg_pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=20.)
+                    cl, ind = fg_pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=5.)
                     CONSOLE.print("Cleaning Point Cloud...")
                     fg_pcd = fg_pcd.select_by_index(ind)
 
@@ -450,6 +465,19 @@ def extract_mesh_from_coarse_sugar(args):
                         CONSOLE.print("Removing vertices with low densities...")
                         vertices_to_remove = o3d_fg_densities < np.quantile(o3d_fg_densities, vertices_density_quantile)
                         o3d_fg_mesh.remove_vertices_by_mask(vertices_to_remove)
+
+                    # Clip to input point cloud bounding box to remove hallucinated floor/ceiling geometry
+                    _pcd_pts = np.asarray(fg_pcd.points)
+                    if len(_pcd_pts) > 0:
+                        _pcd_min = _pcd_pts.min(axis=0)
+                        _pcd_max = _pcd_pts.max(axis=0)
+                        _verts = np.asarray(o3d_fg_mesh.vertices)
+                        _bbox_mask = np.zeros(len(_verts), dtype=bool)
+                        for _ax in range(3):
+                            _bbox_mask |= (_verts[:, _ax] < _pcd_min[_ax]) | (_verts[:, _ax] > _pcd_max[_ax])
+                        if _bbox_mask.any():
+                            CONSOLE.print(f"Clipping {_bbox_mask.sum()} vertices outside input point cloud bbox (floor/ceiling removal)")
+                            o3d_fg_mesh.remove_vertices_by_mask(_bbox_mask)
                 else:
                     CONSOLE.print("\n[WARNING] Foreground is empty.")
                     o3d_fg_mesh = None
@@ -464,7 +492,7 @@ def extract_mesh_from_coarse_sugar(args):
                     bg_pcd.normals = o3d.utility.Vector3dVector(bg_normals.double().cpu().numpy())
 
                     # outliers removal
-                    cl, ind = bg_pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=20.)
+                    cl, ind = bg_pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=5.)
                     CONSOLE.print("Cleaning Point Cloud...")
                     bg_pcd = bg_pcd.select_by_index(ind)
 
@@ -632,7 +660,7 @@ def extract_mesh_from_coarse_sugar(args):
                 fg_pcd.normals = o3d.utility.Vector3dVector(fg_normals.double().cpu().numpy())
 
                 # outliers removal
-                cl, ind = fg_pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=20.)
+                cl, ind = fg_pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=5.)
                 CONSOLE.print("Cleaning Point Cloud...")
                 fg_pcd = fg_pcd.select_by_index(ind)
 
@@ -646,7 +674,20 @@ def extract_mesh_from_coarse_sugar(args):
                     CONSOLE.print("Removing vertices with low densities...")
                     vertices_to_remove = o3d_fg_densities < np.quantile(o3d_fg_densities, vertices_density_quantile)
                     o3d_fg_mesh.remove_vertices_by_mask(vertices_to_remove)
-                
+
+                # Clip to input point cloud bounding box to remove hallucinated floor/ceiling geometry
+                _pcd_pts = np.asarray(fg_pcd.points)
+                if len(_pcd_pts) > 0:
+                    _pcd_min = _pcd_pts.min(axis=0)
+                    _pcd_max = _pcd_pts.max(axis=0)
+                    _verts = np.asarray(o3d_fg_mesh.vertices)
+                    _bbox_mask = np.zeros(len(_verts), dtype=bool)
+                    for _ax in range(3):
+                        _bbox_mask |= (_verts[:, _ax] < _pcd_min[_ax]) | (_verts[:, _ax] > _pcd_max[_ax])
+                    if _bbox_mask.any():
+                        CONSOLE.print(f"Clipping {_bbox_mask.sum()} vertices outside input point cloud bbox (floor/ceiling removal)")
+                        o3d_fg_mesh.remove_vertices_by_mask(_bbox_mask)
+
                 # ---Compute background mesh---
                 if bg_points.shape[0] > 0:
                     CONSOLE.print("\n-----Background mesh-----")
@@ -657,7 +698,7 @@ def extract_mesh_from_coarse_sugar(args):
                     bg_pcd.normals = o3d.utility.Vector3dVector(bg_normals.double().cpu().numpy())
 
                     # outliers removal
-                    cl, ind = bg_pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=20.)
+                    cl, ind = bg_pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=5.)
                     CONSOLE.print("Cleaning Point Cloud...")
                     bg_pcd = bg_pcd.select_by_index(ind)
 

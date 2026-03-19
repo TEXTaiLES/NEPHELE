@@ -1,7 +1,7 @@
 # =========================================================
 # Stage 1: Get prebuilt COLMAP binary
 # =========================================================
-FROM colmap/colmap:latest AS colmap
+# FROM colmap/colmap:latest AS colmap
 
 
 # =========================================================
@@ -32,9 +32,11 @@ RUN apt-get install -y libomp-dev && \
         ln -sf /usr/lib/x86_64-linux-gnu/libomp.so /usr/lib/x86_64-linux-gnu/libomp.so.5; \
     fi
 
+RUN apt-get update && apt-get install -y --no-install-recommends colmap && \
+    rm -rf /var/lib/apt/lists/*
 
-
-
+RUN rm -f /usr/local/bin/colmap || true
+ENV PATH="/usr/bin:${PATH}"
 # ---- Miniconda ----
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh \
     && bash miniconda.sh -b -p /opt/conda \
@@ -86,11 +88,11 @@ WORKDIR /app/sugar_viewer
 RUN npm install --legacy-peer-deps && npm install -g vite
 WORKDIR /app
 
-# ---- Copy COLMAP binaries ----
-COPY --from=colmap /usr/local/bin/colmap /usr/local/bin/colmap
-COPY --from=colmap /usr/local/lib/ /usr/local/lib/
-COPY --from=colmap /usr/lib/x86_64-linux-gnu/ /usr/lib/x86_64-linux-gnu/
-ENV LD_LIBRARY_PATH="/usr/local/lib:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+# # ---- Copy COLMAP binaries ----
+# COPY --from=colmap /usr/local/bin/colmap /usr/local/bin/colmap
+# COPY --from=colmap /usr/local/lib/ /usr/local/lib/
+# COPY --from=colmap /usr/lib/x86_64-linux-gnu/ /usr/lib/x86_64-linux-gnu/
+# ENV LD_LIBRARY_PATH="/usr/local/lib:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
 
 # ---- Create user ----
 ARG USER_ID=1000

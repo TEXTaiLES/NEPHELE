@@ -836,7 +836,7 @@ DONE_HTML = """
 # =============================================================================
 
 app = Flask(__name__)
-init_auth(app) 
+# init_auth(app) 
 
 
 
@@ -867,55 +867,136 @@ def resolve_frames() -> List[str]:
 
 
 FRAMES: List[str] = resolve_frames()
+# def run_preview_masks(num_frames: int = 6) -> List[str]:
+#     """
+#     Run a small SAM2 preview:
+#       - reads prompts.json in OUT_ROOT
+#       - runs segmentation/propagation on a few frames
+#       - writes color cutouts into PREVIEW_DIR
+
+#     Returns: list of filenames (just the name, e.g. "000000.jpg").
+#     """
+
+#     # Clear previous previews
+#     for f in PREVIEW_DIR.glob("*"):
+#         try:
+#             f.unlink()
+#         except Exception:
+#             pass
+
+#     cmd = [
+#         "python3",
+#         "app/video_predict.py",
+#         "--preview",
+#         "--preview-num-frames", str(num_frames),
+#         "--preview-out", str(PREVIEW_DIR),
+#     ]
+
+    
+#     env = os.environ.copy()
+#     env["QUIET"] = "0"
+
+
+
+#     try:
+#         print(f"[preview] running: {' '.join(cmd)}  -> {PREVIEW_DIR}", flush=True)
+#         subprocess.run(cmd, check=True, env=env)
+#     except subprocess.CalledProcessError as e:
+#         print(f"[preview] video_predict.py failed: {e}", flush=True)
+#         return []
+
+#     # Collect the files that were written into PREVIEW_DIR
+#     previews: List[str] = []
+#     for ext in ("*.png", "*.jpg", "*.jpeg", "*.PNG", "*.JPG", "*.JPEG"):
+#         for f in sorted(PREVIEW_DIR.glob(ext)):
+#             previews.append(f.name)   
+
+#     print(f"[preview] found {len(previews)} preview files", flush=True)
+#     return previews
+
 def run_preview_masks(num_frames: int = 6) -> List[str]:
     """
     Run a small SAM2 preview:
-      - reads prompts.json in OUT_ROOT
+      - reads prompts.json (we pass PROMPTS_JSON explicitly)
       - runs segmentation/propagation on a few frames
-      - writes color cutouts into PREVIEW_DIR
+      - writes preview images into PREVIEW_DIR (may include subfolders)
 
-    Returns: list of filenames (just the name, e.g. "000000.jpg").
+    Returns: list of relative paths under PREVIEW_DIR (e.g. "000001.png" or "obj_1/000001.png").
     """
 
-    # Clear previous previews
-    for f in PREVIEW_DIR.glob("*"):
-        try:
-            f.unlink()
-        except Exception:
-            pass
+    PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Clear previous previews (including subfolders)
+    for f in PREVIEW_DIR.rglob("*"):
+        if f.is_file():
+            try:
+                f.unlink()
+            except Exception:
+                pass
+
+    # Resolve repo root that contains app/video_predict.py
+    here = Path(__file__).resolve().parent
+    repo = here
+    for _ in range(8):
+        if (repo / "app" / "video_predict.py").is_file():
+            break
+        if repo.parent == repo:
+            break
+        repo = repo.parent
+
+    script = repo / "app" / "video_predict.py"
 
     cmd = [
         "python3",
-        "app/video_predict.py",
+        str(script),
         "--preview",
         "--preview-num-frames", str(num_frames),
         "--preview-out", str(PREVIEW_DIR),
     ]
 
-    
     env = os.environ.copy()
+
+    # Critical: point the preview script to the prompts we just wrote
+    env["PROMPTS_JSON"] = str(PROMPTS_JSON)
+
+    # Use original input dir and let video_predict.py index it if needed
+    env["AUTO_INDEX"] = "1"
+    env["INPUT"] = str(INPUT.rstrip("/"))
+    env["OUT"] = str(OUT_ROOT)
+
+    # Keep logs visible
     env["QUIET"] = "0"
 
+    print(f"[preview] running: {' '.join(cmd)}", flush=True)
+    print(f"[preview] cwd={repo}", flush=True)
+    print(f"[preview] INPUT={env.get('INPUT')}", flush=True)
+    print(f"[preview] OUT={env.get('OUT')}", flush=True)
+    print(f"[preview] PROMPTS_JSON={env.get('PROMPTS_JSON')}", flush=True)
+    print(f"[preview] PREVIEW_DIR={PREVIEW_DIR}", flush=True)
 
+    p = subprocess.run(
+        cmd,
+        env=env,
+        cwd=str(repo),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
 
-    try:
-        print(f"[preview] running: {' '.join(cmd)}  -> {PREVIEW_DIR}", flush=True)
-        subprocess.run(cmd, check=True, env=env)
-    except subprocess.CalledProcessError as e:
-        print(f"[preview] video_predict.py failed: {e}", flush=True)
+    print(f"[preview] returncode={p.returncode}", flush=True)
+    print(f"[preview] output:\n{p.stdout}", flush=True)
+
+    if p.returncode != 0:
         return []
 
-    # Collect the files that were written into PREVIEW_DIR
+    # Collect files written in PREVIEW_DIR (including subfolders)
     previews: List[str] = []
     for ext in ("*.png", "*.jpg", "*.jpeg", "*.PNG", "*.JPG", "*.JPEG"):
-        for f in sorted(PREVIEW_DIR.glob(ext)):
-            previews.append(f.name)   
+        for f in sorted(PREVIEW_DIR.rglob(ext)):
+            previews.append(str(f.relative_to(PREVIEW_DIR)).replace("\\", "/"))
 
     print(f"[preview] found {len(previews)} preview files", flush=True)
     return previews
-
-
-
 
 
 def _json_ok(**payload: Any):
@@ -997,17 +1078,22 @@ def pick():
     )
 
 
+# @app.get("/preview/<path:name>")
+# def preview_image(name: str):
+#     """
+#     Serve preview masked images from PREVIEW_DIR.
+#     """
+#     fp = PREVIEW_DIR / name
+#     if not fp.is_file():
+#         return _json_err("Preview image not found", http=404)
+#     return send_from_directory(PREVIEW_DIR, fp.name)
+
 @app.get("/preview/<path:name>")
 def preview_image(name: str):
-    """
-    Serve preview masked images from PREVIEW_DIR.
-    """
     fp = PREVIEW_DIR / name
     if not fp.is_file():
         return _json_err("Preview image not found", http=404)
-    return send_from_directory(PREVIEW_DIR, fp.name)
-
-
+    return send_from_directory(PREVIEW_DIR, name)  # <-- important
 
 @app.post("/save")
 def save():
