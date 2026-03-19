@@ -16,7 +16,7 @@ services:
       - INDEX_SUFFIX=_indexed
       - HF_HOME=/data/out/.cache/huggingface
       - XDG_CACHE_HOME=/data/out/.cache
-      - CUDA_VISIBLE_DEVICES=2
+      - CUDA_VISIBLE_DEVICES=0
     env_file:
       - .env
     working_dir: /workspace
@@ -60,7 +60,7 @@ services:
       # - ./logs:/app/logs
     environment:
       - DATASET_NAME=${DATASET_NAME}
-      - CUDA_VISIBLE_DEVICES=2
+      - CUDA_VISIBLE_DEVICES=0
     working_dir: /workspace
     gpus: all
     command: ["tail", "-f", "/dev/null"]

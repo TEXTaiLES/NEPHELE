@@ -333,4 +333,3 @@ fi
 restore_fds
 echo "STATUS: MESH DONE"
 echo "LOG: $LOGFILE"
-

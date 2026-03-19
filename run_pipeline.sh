@@ -453,6 +453,12 @@ else
   echo "[*] Dockerfile/train.py/coarse_mesh.py not found in $nephele_PATH (skipping copy)"
 fi
 
+if [ -f "$nephele_PATH/convert_to_rgba.py" ]; then
+  echo "[*] Copying convert_to_rgba.py to $SUGAR_PATH"
+  cp -f "$nephele_PATH/convert_to_rgba.py" "$SUGAR_PATH"
+else
+  echo "[*] convert_to_rgba.py not found in $nephele_PATH (skipping copy)"
+fi
 # --- run SUGAR (pass DATASET_NAME as env) ---
 echo "[*] Running SuGaR pipeline for dataset: $DATASET_NAME..."
 cd "$SUGAR_PATH"
