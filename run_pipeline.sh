@@ -436,28 +436,35 @@ bash "$COLMAP_OUT_PATH/run_colmap.sh" \
   "$KNOWN_POSES"
 
 # --- optionally stage helper files ---
-if [ -f "$nephele_PATH/run_sugar_pipeline_with_sam.sh" ]; then
+if [ -f "$nephele_PATH/helpers/run_sugar_pipeline_with_sam.sh" ]; then
   echo "[*] Copying run_sugar_pipeline_with_sam.sh to $SUGAR_PATH"
-  cp -f "$nephele_PATH/run_sugar_pipeline_with_sam.sh" "$SUGAR_PATH"
+  cp -f "$nephele_PATH/helpers/run_sugar_pipeline_with_sam.sh" "$SUGAR_PATH"
   chmod +x "$SUGAR_PATH/run_sugar_pipeline_with_sam.sh"
 else
-  echo "[*] run_sugar_pipeline_with_sam.sh not found in $nephele_PATH (skipping copy)"
+  echo "[*] run_sugar_pipeline_with_sam.sh not found in $nephele_PATH/helpers (skipping copy)"
 fi
 
-if [ -f "$nephele_PATH/Dockerfile_final" ]; then
+if [ -f "$nephele_PATH/helpers/Dockerfile_final" ]; then
   echo "[*] Copying Dockerfile and helpers to $SUGAR_PATH"
-  cp -f "$nephele_PATH/Dockerfile_final" "$SUGAR_PATH"
-  cp -f "$nephele_PATH/train.py" "$SUGAR_PATH/gaussian_splatting/"
-  cp -f "$nephele_PATH/coarse_mesh.py" "$SUGAR_PATH/sugar_extractors/coarse_mesh.py"
+  cp -f "$nephele_PATH/helpers/Dockerfile_final" "$SUGAR_PATH"
+  cp -f "$nephele_PATH/helpers/train.py" "$SUGAR_PATH/gaussian_splatting/"
+  cp -f "$nephele_PATH/helpers/coarse_mesh.py" "$SUGAR_PATH/sugar_extractors/coarse_mesh.py"
 else
   echo "[*] Dockerfile/train.py/coarse_mesh.py not found in $nephele_PATH (skipping copy)"
 fi
 
-if [ -f "$nephele_PATH/convert_to_rgba.py" ]; then
+if [ -f "$nephele_PATH/helpers/convert_to_rgba.py" ]; then
   echo "[*] Copying convert_to_rgba.py to $SUGAR_PATH"
-  cp -f "$nephele_PATH/convert_to_rgba.py" "$SUGAR_PATH"
+  cp -f "$nephele_PATH/helpers/convert_to_rgba.py" "$SUGAR_PATH"
 else
-  echo "[*] convert_to_rgba.py not found in $nephele_PATH (skipping copy)"
+  echo "[*] convert_to_rgba.py not found in $nephele_PATH/helpers (skipping copy)"
+fi
+
+if [ -f "$nephele_PATH/helpers/cleanup_mesh.py" ]; then
+  echo "[*] Copying cleanup_mesh.py to $SUGAR_PATH"
+  cp -f "$nephele_PATH/helpers/cleanup_mesh.py" "$SUGAR_PATH"
+else
+  echo "[*] cleanup_mesh.py not found in $nephele_PATH/helpers (skipping copy)"
 fi
 # --- run SUGAR (pass DATASET_NAME as env) ---
 echo "[*] Running SuGaR pipeline for dataset: $DATASET_NAME..."
