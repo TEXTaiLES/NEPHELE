@@ -25,9 +25,9 @@ HOST_GID="$(id -g)"
 
 DATASET_NAME="${DATASET_NAME:-${1:-}}"
 : "${DATASET_NAME:?Usage: $0 DATASET_NAME}"
-REFINEMENT_TIME="${REFINEMENT_TIME:-medium}"
+REFINEMENT_TIME="${REFINEMENT_TIME:-short}"
 
-# ========= LOGGING (μόνο σε αρχείο) =========
+# ========= LOGGING =========
 LOGDIR="$SUGAR_PATH/logs"
 mkdir -p "$LOGDIR"
 LOGFILE="$LOGDIR/${DATASET_NAME}_$(date +%Y%m%d_%H%M%S).log"
@@ -273,10 +273,16 @@ echo " DONE! Dataset conversion completed."
 
 # ========= 3b. Convert undistorted images to RGBA PNG (alpha-mask background) =========
 echo "[*] STEP 3b: Convert undistorted images to RGBA PNG"
-python3 "$SUGAR_PATH/convert_to_rgba.py" \
-  "$SUGAR_DATA_ROOT/images" \
-  "$SUGAR_DATA_ROOT/sparse/0/images.bin" \
-  2 "${BLACK_THRESHOLD:-15}"
+run_in_sugar '
+  set -e
+  umask 0002
+  source /opt/conda/etc/profile.d/conda.sh
+  conda activate sugar
+  python /workspace/convert_to_rgba.py \
+    /app/data/images \
+    /app/data/sparse/0/images.bin \
+    2 '"${BLACK_THRESHOLD:-15}"'
+'
 
 # ========= 4. SuGaR training =========
 echo "[*] STEP 4: SuGaR training"
@@ -333,3 +339,4 @@ fi
 restore_fds
 echo "STATUS: MESH DONE"
 echo "LOG: $LOGFILE"
+
