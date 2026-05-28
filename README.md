@@ -101,13 +101,21 @@ This will execute the **SAM2** and **SuGaR** pipelines for the specified dataset
 
 
 
-# SAM2 + SuGaR Pipeline for 3D Reconstruction
+#UI Usage
 
 ## Overview
 
 This project uses the SAM2 and SuGaR frameworks for 3D reconstruction of images, generating high-quality models with background removal. By clicking on significant points in an image, the SAM2 model generates a mask that isolates the object of interest.
 
 ## Workflow
+
+## Upload Data
+### 1. Upload Options
+
+In this project you can upload either images from a local folder or either upload a video from which frames will be extracted. There is a third option, which is to get a scan dataset that it is already uploaded to "HESTIA", a database of TexTaiLES project.
+<p align="center">
+  <img src="readme_images/upload_data.png" alt="Example Image (GUI points)" width="640">
+</p>
 ## Mask Generation
 ### 1. Image Loading and Point Annotation
 
