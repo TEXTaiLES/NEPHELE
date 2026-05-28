@@ -126,6 +126,14 @@ Users can provide input in one of three ways:
 ### 2. Model Selection
 Choose the Gaussian Splatting model to use: **SuGaR** or **PGSR**.
 
+| Model     | When to prefer                                       | Reference |
+|-----------|-----------------------------------------------------|-----------|
+| **SuGaR** | Mature, widely used; good general-purpose default   | Guédon & Lepetit, *SuGaR: Surface-Aligned Gaussian Splatting for Efficient 3D Mesh Reconstruction and High-Quality Mesh Rendering*, CVPR 2024 — [paper](https://arxiv.org/abs/2311.12775) · [project](https://anttwo.github.io/sugar/) · [code](https://github.com/Anttwo/SuGaR) |
+| **PGSR**  | Better planar surfaces / textiles / thin structures | Chen et al., *PGSR: Planar-based Gaussian Splatting for Efficient and High-Fidelity Surface Reconstruction*, TVCG 2024 — [paper](https://arxiv.org/abs/2406.06521) · [project](https://zju3dv.github.io/pgsr/) · [code](https://github.com/zju3dv/PGSR) |
+
+Both methods take the same inputs (masked frames + COLMAP poses) and emit a
+textured mesh.
+
 <p align="center">
   <img src="readme_images/pick_model.png" alt="Gaussian Splatting model" width="1280">
 </p>
