@@ -101,93 +101,65 @@ This will execute the **SAM2** and **SuGaR** pipelines for the specified dataset
 
 
 
-#UI Usage
+# UI Usage
 
 ## Overview
-
-This project uses the SAM2 and SuGaR frameworks for 3D reconstruction of images, generating high-quality models with background removal. By clicking on significant points in an image, the SAM2 model generates a mask that isolates the object of interest.
+This project uses the SAM2 and SuGaR frameworks for 3D reconstruction of images, generating high-quality models with background removal. By clicking on points of interest in an image, the SAM2 model generates a mask that isolates the target object.
 
 ## Workflow
 
-## Upload Data
-### 1. Upload Options
-
-In this project you can upload either images from a local folder or either upload a video from which frames will be extracted. There is a third option, which is to get a scan dataset that it is already uploaded to "HESTIA", a database of TexTaiLES project.
+### Get Started: Stages of Nephele
 <p align="center">
-  <img src="readme_images/upload_data.png" alt="Example Image (GUI points)" width="640">
-</p>
-## Mask Generation
-### 1. Image Loading and Point Annotation
-
-The process starts by loading an image. The user can click on the image to add points of interest:
-
-- **Left-click** to add **positive points** (marked in **green**).
-- **Right-click** to add **negative points** (marked in **red**).
-
-
-The tool allows the user to select specific regions of the image, which will later be used to create a mask.
-
-<p align="center">
-  <img src="readme_images/dress_gui.png" alt="Example Image (GUI points)" width="640">
+  <img src="readme_images/get_started.png" width="1280">
 </p>
 
-#### Example Image (before mask creation):
+### 1. Upload Data
+Users can provide input in one of three ways:
+- Upload images from a local folder.
+- Upload a video, from which frames are automatically extracted.
+- Load an existing scan dataset from **HESTIA**, the database of the TexTaiLES project.
+
 <p align="center">
-  <img src="readme_images/dress_original_1760625683.jpg" alt="Example Image (original)" width="640">
+  <img src="readme_images/upload_data.png" alt="Upload data" width="1280">
 </p>
 
-### 2. Generating the Mask with SAM2
+### 2. Model Selection
+Choose the Gaussian Splatting model to use: **SuGaR** or **PGSR**.
 
-Once enough points are added, the SAM2 model generates a **mask** that isolates the object of interest. The mask is a binary image that shows the identified area.
-
-#### Mask Output:
 <p align="center">
-  <img src="readme_images/dress_mask_1760625683.jpg" alt="Mask Output" width="640">
+  <img src="readme_images/pick_model.png" alt="Gaussian Splatting model" width="1280">
 </p>
 
-### 3. Overlay of Mask on Image
+### 3. Image Loading and Point Annotation
+Load an image, then click to add points of interest:
+- **Left-click** adds a **positive point** (green) — part of the object to keep.
+- **Right-click** adds a **negative point** (red) — part to exclude.
 
-After the mask is created, it is applied to the original image, showing the object against a transparent or black background, as shown below:
+These points let you target specific regions of the image, which are then used to generate the mask.
 
 <p align="center">
-  <img src="readme_images/dress_masked_1760625683.jpg" alt="Image overlay" width="640">
+  <img src="readme_images/pick_points.png" alt="Point annotation" width="1280">
 </p>
 
+### 4. Generating the Mask with SAM2
+Once enough points are added, SAM2 generates a **mask** that isolates the object — a binary image marking the identified region. For easier evaluation, the mask is overlaid on the original image.
 
-### 4. Final Output
-
-The final result is an image where the object is isolated from the background, ready for further processing or 3D reconstruction.
-
-##  Structure-from-Motion with COLMAP
-
-The masked images are passed to **COLMAP** to estimate **camera poses** and generate a **sparse/dense point cloud**.
-
+#### Mask preview
 <p align="center">
-  <img src="readme_images/colmap_dress.png" alt="Image overlay" width="640">
+  <img src="readme_images/preview_images.png" alt="Mask preview" width="1280">
 </p>
 
-## Surface-Aligned Gaussian Splatting (SuGaR)
-
-The COLMAP reconstruction initializes a SuGaR model, producing a **3D Gaussian field**.
+### 5. Final Output
+After reviewing the preview images, click **Continue** to open the results page. Once processing finishes, you can download the final outputs.
 
 <p align="center">
-  <img src="readme_images/gs3d.png" alt="Gaussian Splatting" width="650">
+  <img src="readme_images/result_page.png" alt="Results" width="1280">
 </p>
 
-We can visualize both the **splat points** and the **ellipsoids** that represent their covariance:
+The final result is an `.obj` file with the object isolated from the background, ready for further processing or 3D reconstruction.
 
 <p align="center">
-  <img src="readme_images/ellipsoids_3d_gs.png" alt="Ellipsoids Visualization" width="650">
-</p>
-
-### Mesh Extraction and Texturing
-
-Finally, the SuGaR output is converted to a **Poisson mesh** and textured.
-
-**Textured Mesh Output:**
-
-<p align="center">
-  <img src="readme_images/sugarfine_3Dgs7000_densityestim02_sdfnorm02_level03_decim1000000_normalconsistency01_gaussperface1.png" alt="Textured Mesh" width="640">
+  <img src="readme_images/obj.png" alt="OBJ output" width="640">
 </p>
 
 
