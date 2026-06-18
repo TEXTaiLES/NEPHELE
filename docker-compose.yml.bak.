@@ -1,0 +1,69 @@
+services:
+  sam2:
+    build:
+      context: ./SAM2
+      dockerfile: Dockerfile
+    image: sam2:local
+    container_name: sam2
+    volumes:
+      - ./SAM2:/workspace
+      - ./SAM2/data/input:/data/in
+      - ./SAM2/data/output:/data/out
+    environment:
+      - DATASET_NAME=${DATASET_NAME}
+      - INPUT=/data/in/${DATASET_NAME}
+      - OUT=/data/out
+      - INDEX_SUFFIX=_indexed
+      - HF_HOME=/data/out/.cache/huggingface
+      - XDG_CACHE_HOME=/data/out/.cache
+      - CUDA_VISIBLE_DEVICES=0
+    env_file:
+      - .env
+    working_dir: /workspace
+    # request all GPUs for SAM2
+    gpus: all  # disabled for CPU-only runs; uncomment to re-enable GPUs
+    ports:
+      - "${WEB_PORT:-8092}:5000"
+      
+    # If DATASET_NAME is provided in the environment, run the Flask picker on container start.
+    # Otherwise keep the container alive (so `run_pipeline.sh` can start the picker later).
+    # Example: DATASET_NAME=dress WEB_PORT=8092 HOST_UID=$(id -u) HOST_GID=$(id -g) \
+    #            docker compose up -d --build sam2
+    command: ["sh", "-c", "if [ -n \"$DATASET_NAME\" ]; then exec python3 -u /workspace/app/point_picker_flask.py; else exec tail -f /dev/null; fi"]
+    # Run container processes as the host user by default to avoid permission issues
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    # restart: unless-stopped
+    restart: "no"
+
+
+  colmap:
+    image: graffitytech/colmap:3.8-cpu-ubuntu22.04
+    container_name: colmap
+    volumes:
+      - ./colmap:/workspace
+      - ./colmap/input:/workspace/input:rw
+      - ./colmap/output:/workspace/output:rw
+    working_dir: /workspace
+    command: ["tail", "-f", "/dev/null"]
+    restart: "no"
+
+
+  sugar:
+    build:
+      context: ./SUGAR/SuGaR
+      dockerfile: ../../helpers/Dockerfile_final
+    image: sugar:local
+    container_name: sugar
+    volumes:
+      - ./SUGAR/SuGaR:/workspace
+      # - ./data:/app/data
+      # - ./logs:/app/logs
+    environment:
+      - DATASET_NAME=${DATASET_NAME}
+      - CUDA_VISIBLE_DEVICES=0
+    working_dir: /workspace
+    gpus: all
+    command: ["tail", "-f", "/dev/null"]
+    env_file:
+      - .env
+    restart: "no"

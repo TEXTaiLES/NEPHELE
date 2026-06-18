@@ -1,44 +1,52 @@
+# NOTE: the Point Picker UI was extracted into the standalone `nefele_ui`
+# project. The worker below is still reachable at http://sam2:5001 for a UI
+# running on the same Docker network.
+
 services:
+
+# GPU worker — the SAM2 stage of the pipeline. run_pipeline.sh (a host-level
+# orchestrator) brings this container up and `docker compose exec`s into it.
+# The vm_comms poller does NOT run here: it is a host process — see
+# worker_poller.py — because run_pipeline.sh drives the containers from the
+# host and cannot run inside one of them.
+
   sam2:
     build:
       context: ./SAM2
       dockerfile: Dockerfile
     image: sam2:local
-    container_name: sam2
+    container_name: ${SAM2_CONTAINER_NAME:-sam2}
     volumes:
       - ./SAM2:/workspace
       - ./SAM2/data/input:/data/in
       - ./SAM2/data/output:/data/out
     environment:
-      - DATASET_NAME=${DATASET_NAME}
-      - INPUT=/data/in/${DATASET_NAME}
-      - OUT=/data/out
-      - INDEX_SUFFIX=_indexed
       - HF_HOME=/data/out/.cache/huggingface
       - XDG_CACHE_HOME=/data/out/.cache
-      - CUDA_VISIBLE_DEVICES=0
+      - WORKER_PORT=5001
+    # Optional: when KAFKA_BROKER is set, worker_poller.py runs as a Kafka
+    # consumer of `nefele_job_created` instead of polling /nefele/claim.
+    # Unset → polling. Has no effect on this sam2 service, but kept here so
+    # the host-running poller can source the same .env if you wish.
+      - KAFKA_BROKER=${KAFKA_BROKER:-}
     env_file:
       - .env
     working_dir: /workspace
-    # request all GPUs for SAM2
-    gpus: all  # disabled for CPU-only runs; uncomment to re-enable GPUs
-    ports:
-      - "${WEB_PORT:-8092}:5000"
-      
-    # If DATASET_NAME is provided in the environment, run the Flask picker on container start.
-    # Otherwise keep the container alive (so `run_pipeline.sh` can start the picker later).
-    # Example: DATASET_NAME=dress WEB_PORT=8092 HOST_UID=$(id -u) HOST_GID=$(id -g) \
-    #            docker compose up -d --build sam2
-    command: ["sh", "-c", "if [ -n \"$DATASET_NAME\" ]; then exec python3 -u /workspace/app/point_picker_flask.py; else exec tail -f /dev/null; fi"]
-    # Run container processes as the host user by default to avoid permission issues
+    # request GPU for SAM2 (override via GPU_ID env var)
+    gpus:
+      - driver: nvidia
+        device_ids: ['${GPU_ID:-0}']
+        capabilities: [compute, utility]
+    # Worker is internal-only; no host port mapping by default.
+    expose:
+      - "5001"
+    command: ["python3", "-u", "/workspace/app/worker_server.py"]
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
-    # restart: unless-stopped
-    restart: "no"
-
+    restart: unless-stopped
 
   colmap:
     image: graffitytech/colmap:3.8-cpu-ubuntu22.04
-    container_name: colmap
+    container_name: ${COLMAP_CONTAINER_NAME:-colmap}
     volumes:
       - ./colmap:/workspace
       - ./colmap/input:/workspace/input:rw
@@ -47,22 +55,42 @@ services:
     command: ["tail", "-f", "/dev/null"]
     restart: "no"
 
-
   sugar:
     build:
       context: ./SUGAR/SuGaR
       dockerfile: Dockerfile_final
     image: sugar:local
-    container_name: sugar
+    container_name: ${SUGAR_CONTAINER_NAME:-sugar}
     volumes:
       - ./SUGAR/SuGaR:/workspace
       # - ./data:/app/data
       # - ./logs:/app/logs
     environment:
       - DATASET_NAME=${DATASET_NAME}
-      - CUDA_VISIBLE_DEVICES=0
     working_dir: /workspace
-    gpus: all
+    gpus:
+      - driver: nvidia
+        device_ids: ['${GPU_ID:-0}']
+        capabilities: [compute, utility]
+    command: ["tail", "-f", "/dev/null"]
+    env_file:
+      - .env
+    restart: "no"
+
+  pgsr:
+    build:
+      context: ./pgsr_overrides
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${HOST_UID:-1000}
+        GROUP_ID: ${HOST_GID:-1000}
+    image: pgsr:local
+    container_name: ${PGSR_CONTAINER_NAME:-pgsr}
+    working_dir: /app
+    gpus:
+      - driver: nvidia
+        device_ids: ['${GPU_ID:-0}']
+        capabilities: [compute, utility]
     command: ["tail", "-f", "/dev/null"]
     env_file:
       - .env

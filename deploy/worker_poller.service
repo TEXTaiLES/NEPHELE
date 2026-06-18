@@ -1,0 +1,43 @@
+[Unit]
+Description=Nefele SAM VM worker — vm_comms poller (HESTIA-driven)
+Documentation=https://github.com/TEXTaiLES/HESTIA  https://github.com/anthropics/claude-code
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Run as the user that owns the samplify_sugar checkout and can call `docker`.
+User=youruser
+Group=youruser
+
+# Absolute path to the samplify_sugar checkout on the SAM VM. WorkingDirectory
+# matters: worker_poller.py defaults COMPOSE_DIR to PIPELINE_SCRIPT.parent and
+# does `docker compose exec sam2 ...` from there.
+WorkingDirectory=/opt/samplify_sugar
+
+# Reads HESTIA_API_URL / HESTIA_API_KEY / KAFKA_BROKER / etc. from this file.
+# The file should be owned by the User above and chmod 600.
+# Example contents are in deploy/worker_poller.env.example next to this unit.
+EnvironmentFile=/opt/samplify_sugar/deploy/worker_poller.env
+
+# Required defaults — overridden by EnvironmentFile if set there.
+Environment=IN_MNT=/opt/samplify_sugar/SAM2/data/input
+Environment=OUT=/opt/samplify_sugar/SAM2/data/output
+Environment=INDEX_SUFFIX=_indexed
+Environment=PIPELINE_SCRIPT=/opt/samplify_sugar/run_pipeline.sh
+Environment=COMPOSE_DIR=/opt/samplify_sugar
+Environment=SAM2_SERVICE=sam2
+
+# Use an interpreter that has `requests` (+ `confluent_kafka` for Kafka mode).
+# Adjust the path if the SAM VM uses a venv: e.g. /home/youruser/.venvs/poller/bin/python3
+ExecStart=/usr/bin/python3 -u /opt/samplify_sugar/SAM2/app/worker_poller.py
+
+Restart=always
+RestartSec=10
+# Stream stdout/stderr to journald — view with `journalctl -u worker_poller -f`.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=worker_poller
+
+[Install]
+WantedBy=multi-user.target

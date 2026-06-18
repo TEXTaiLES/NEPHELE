@@ -1,0 +1,210 @@
+.welcome-wrap {
+  width: 100%;
+  max-width: 980px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeUp .5s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.welcome-hero {
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--card);
+  backdrop-filter: var(--glass);
+  box-shadow: var(--shadow);
+  padding: 32px 28px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.welcome-hero::before {
+  content: "";
+  position: absolute;
+  inset: -40% -10% auto auto;
+  width: 60%;
+  height: 220%;
+  background: radial-gradient(closest-side, rgba(10, 132, 255, 0.18), transparent 70%);
+  pointer-events: none;
+}
+
+.welcome-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto auto -40% -10%;
+  width: 60%;
+  height: 220%;
+  background: radial-gradient(closest-side, rgba(255, 45, 85, 0.16), transparent 70%);
+  pointer-events: none;
+}
+
+.welcome-logo {
+  width: 96px;
+  height: 96px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 24px rgba(10, 132, 255, 0.25));
+  animation: floatLogo 6s ease-in-out infinite;
+}
+
+@keyframes floatLogo {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+.welcome-titles { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+.welcome-name {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+  background: linear-gradient(90deg, #0a84ff 0%, #af52de 50%, #ff375f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.welcome-tagline {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.welcome-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 760px) {
+  .welcome-steps { grid-template-columns: 1fr; }
+  .welcome-hero { padding: 24px 20px; flex-direction: column; text-align: center; gap: 14px; }
+  .welcome-name { font-size: 30px; }
+}
+
+.step-card {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--card);
+  backdrop-filter: var(--glass);
+  box-shadow: var(--shadow);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+
+.step-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.18);
+}
+
+.step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(10, 132, 255, 0.16);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.step-title { font-weight: 700; font-size: 16px; letter-spacing: .1px; }
+
+.step-sub { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+
+.welcome-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0 4px;
+}
+
+.welcome-active { font-size: 13.5px; }
+
+.welcome-active strong { color: var(--ink); }
+
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.welcome-btn {
+  padding: 14px 22px;
+  border-radius: 14px;
+  font-size: 15px;
+  gap: 10px;
+}
+
+.welcome-btn .arrow {
+  display: inline-block;
+  transition: transform .15s ease;
+}
+
+.welcome-btn:hover .arrow { transform: translateX(3px); }
+
+.welcome-model {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.welcome-model-label {
+  color: var(--muted, #6a6a6a);
+  font-weight: 600;
+}
+
+.welcome-model-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border, #e3e3e8);
+  border-radius: 999px;
+  background: var(--bg-soft, #f5f6f8);
+  padding: 2px;
+  gap: 2px;
+}
+
+.welcome-model-opt {
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted, #6a6a6a);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+
+.welcome-model-opt:hover { color: var(--ink, #222); }
+
+.welcome-model-opt.is-active {
+  background: var(--accent, #2563eb);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+
+.welcome-model-status {
+  font-size: 12px;
+  min-width: 60px;
+  transition: opacity .2s;
+}

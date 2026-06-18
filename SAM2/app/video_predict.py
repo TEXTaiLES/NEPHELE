@@ -9,6 +9,7 @@ DATASET_NAME = os.environ.get("DATASET_NAME", "").strip()
 _default_input = f"/data/in/{DATASET_NAME}" if DATASET_NAME else "/data/in"
 INPUT = os.environ.get("INPUT", _default_input)
 OUT_ROOT = os.environ.get("OUT", "/data/out")
+OUT_NAME = os.environ.get("OUT_NAME", "").strip()
 
 AUTO_INDEX   = os.environ.get("AUTO_INDEX", "1")
 INDEX_SUFFIX = os.environ.get("INDEX_SUFFIX", "_indexed")
@@ -56,9 +57,12 @@ def ensure_indexed(src_dir, suffix="_indexed"):
     dst    = os.path.join(parent, base + suffix)
     os.makedirs(dst, exist_ok=True)
 
-    # Rebuild the indexed set every time (simple & safe)
+    # Rebuild only the image files — leave prompts.json and other side-car
+    # files untouched so the worker's pre-written prompts survive the re-index.
     for f in os.listdir(dst):
-        os.remove(os.path.join(dst, f))
+        fp = os.path.join(dst, f)
+        if os.path.isfile(fp) and os.path.splitext(f)[1].lower() in ACCEPT_EXTS:
+            os.remove(fp)
 
     for i, f in enumerate(files):
         ext = os.path.splitext(f)[1].lower()
@@ -168,7 +172,20 @@ def run_sam2(preview=False, preview_num_frames=6, preview_out=None):
 
     # 2) Paths
     inp_base = os.path.basename(INPUT.rstrip("/"))
-    out_name = inp_base if os.path.isdir(INPUT) else os.path.splitext(inp_base)[0]
+    input_rel = ""
+    if INPUT.startswith("/data/in/"):
+        input_rel = INPUT[len("/data/in/"):].strip("/")
+
+    if OUT_NAME:
+        out_name = OUT_NAME
+    elif DATASET_NAME:
+        ds = DATASET_NAME.rstrip("/")
+        out_name = f"{ds}{INDEX_SUFFIX}" if AUTO_INDEX == "1" else ds
+    elif input_rel:
+        # Preserve nested dataset prefixes (e.g. primitive/foo_indexed)
+        out_name = input_rel
+    else:
+        out_name = inp_base if os.path.isdir(INPUT) else os.path.splitext(inp_base)[0]
 
     OUT_DIR = os.path.join(OUT_ROOT, out_name)
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -188,6 +205,9 @@ def run_sam2(preview=False, preview_num_frames=6, preview_out=None):
     #         f"Run the web point picker first and press 'Save'."
     #     )
     PROMPTS_JSON = os.environ.get("PROMPTS_JSON", os.path.join(OUT_DIR, "prompts.json"))
+    if not os.path.isfile(PROMPTS_JSON) and input_rel:
+        # Fallback for runs where DATASET_NAME/PROMPTS_JSON env isn't propagated.
+        PROMPTS_JSON = os.path.join(OUT_ROOT, input_rel, "prompts.json")
     if not os.path.isfile(PROMPTS_JSON):
         raise FileNotFoundError(f"prompts.json not found at {PROMPTS_JSON}. Run the web point picker first and press 'Save'.")
 
@@ -209,7 +229,7 @@ def run_sam2(preview=False, preview_num_frames=6, preview_out=None):
     num_total_frames = len(frame_paths)
 
     # 5) SAM2 predictor
-    pred = SAM2VideoPredictor.from_pretrained("facebook/sam2-hiera-large").to("cuda")
+    pred = SAM2VideoPredictor.from_pretrained("facebook/sam2.1-hiera-large").to("cuda")
     use_bf16 = torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8
     dtype = torch.bfloat16 if use_bf16 else torch.float16
 

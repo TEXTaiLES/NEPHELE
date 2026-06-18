@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Point Picker — {{ ds }}{% endblock %}
+{% block body_class %}centered{% endblock %}
+
+{% block content %}
+<div class="card done-card">
+  <div class="badge">
+    <span class="dot-ok"></span> Using existing prompts
+  </div>
+  <div class="title">You're good to go</div>
+  <div class="muted">
+    The existing <code>prompts.json</code> for <strong>{{ ds }}</strong> will be used.
+    You can now close this tab and return to the terminal.
+  </div>
+
+  <div class="files-small">
+    <div><strong>PROMPTS_JSON:</strong> {{ prompts }}</div>
+    <div><strong>DONE_FLAG:</strong> {{ done }}</div>
+    <div><strong>USE_EXISTING:</strong> {{ use_existing }}</div>
+  </div>
+</div>
+{% endblock %}

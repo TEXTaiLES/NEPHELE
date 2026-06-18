@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Nephele — 3D Reconstruction{% endblock %}
+{% block body_class %}centered{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/welcome.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="welcome-wrap">
+  <div class="welcome-hero">
+    <img class="welcome-logo"
+         src="{{ url_for('static', filename='img/nephele-logo.png') }}"
+         alt="Nephele logo"
+         onerror="this.style.display='none'">
+    <div class="welcome-titles">
+      <h1 class="welcome-name">Nephele</h1>
+      <p class="welcome-tagline">3D reconstruction with point-prompted segmentation.</p>
+    </div>
+  </div>
+
+  <div class="welcome-steps">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <div class="step-title">Upload</div>
+      <div class="step-sub">Name your dataset and drag-drop your images.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <div class="step-title">Pick points</div>
+      <div class="step-sub">Mark positive and negative points to guide SAM2.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <div class="step-title">Reconstruct</div>
+      <div class="step-sub">COLMAP + SuGaR build the 3D scene automatically.</div>
+    </div>
+  </div>
+
+  <div class="welcome-cta">
+    {% if is_configured %}
+      <div class="muted welcome-active">
+        Active dataset: <strong>{{ dataset_name }}</strong>
+      </div>
+      <div class="welcome-actions">
+        {% if has_frames %}
+          <a class="btn btn-primary welcome-btn"
+             href="{{ url_for('home.index') if has_prompts else url_for('picker.pick') }}">
+            {{ 'Continue' if has_prompts else 'Pick points' }}
+            <span class="arrow" aria-hidden="true">→</span>
+          </a>
+        {% endif %}
+        <a class="btn btn-ghost welcome-btn" href="{{ url_for('results.page') }}">View results</a>
+        <a class="btn btn-ghost welcome-btn" href="{{ url_for('setup.setup') }}">New dataset</a>
+      </div>
+    {% else %}
+      <a class="btn btn-primary welcome-btn" href="{{ url_for('setup.setup') }}">
+        Get started
+        <span class="arrow" aria-hidden="true">→</span>
+      </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

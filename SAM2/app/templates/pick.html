@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Picker{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/picker.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="shell expanded">
+  <div class="hero">
+    <span class="badge"><span class="dot"></span> Interactive Picker</span>
+    <div class="hero-title">Precision point selection</div>
+    <div class="spacer"></div>
+    <div class="hero-sub">
+      Left=POS, Right=NEG, Undo <span class="key">U</span>/<span class="key">⌘Z</span>,
+      Zoom=Wheel, Pan=<span class="key">Space</span>+Drag
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="head">
+      <div class="hero-title" id="legend">Loading…</div>
+      <div class="spacer"></div>
+      <div class="pill"><span id="count">0</span> points</div>
+    </div>
+    <div class="stage" id="stage">
+      <canvas id="c"></canvas>
+      <div class="crosshair" id="xh"><div class="h"></div><div class="v"></div></div>
+      <div class="grid" id="grid"></div>
+
+      <div class="overlay-ui">
+        <div class="seg-switch" role="group" aria-label="POS/NEG mode">
+          <button id="posBtn" class="active pos" type="button">POS</button>
+          <button id="negBtn" class="neg" type="button">NEG</button>
+        </div>
+        <button class="btn-ghost btn" id="undoBtn" type="button">Undo (U)</button>
+        <button class="btn-ghost btn" id="gridBtn" type="button">Grid</button>
+        <button class="btn-ghost btn" id="clearBtn" type="button">Clear</button>
+        <button class="btn-primary btn" id="saveBtn" type="button">Save</button>
+      </div>
+
+      <div class="coords" id="coords">x: –, y: – | zoom: 1.00×</div>
+    </div>
+  </div>
+
+  <div class="drawer">
+    <div class="panel">
+      <div class="hd"><strong>Points</strong><div class="spacer"></div><span class="badge-mini" id="miniCount">0</span></div>
+      <div class="bd" id="list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast">Saved</div>
+
+<div id="previewModal" class="modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title">Preview masks</div>
+      <div class="spacer"></div>
+      <span class="modal-sub">Check if the masks look okay before continuing.</span>
+    </div>
+    <div id="previewGrid" class="preview-grid"></div>
+    <div class="modal-actions">
+      <button id="restartBtn" class="btn-ghost btn" type="button">Start over</button>
+      <button id="confirmBtn" class="btn-primary btn" type="button">Looks good, continue</button>
+    </div>
+  </div>
+</div>
+
+<div id="loadingOverlay" class="overlay">
+  <div class="overlay-card">
+    <div class="dots-row">
+      <div class="dot-bounce" style="animation-delay:0s;"></div>
+      <div class="dot-bounce" style="animation-delay:0.12s;"></div>
+      <div class="dot-bounce" style="animation-delay:0.24s;"></div>
+    </div>
+    <div id="loadingLabel" class="overlay-label">Generating preview…</div>
+  </div>
+</div>
+
+<div id="doneOverlay" class="overlay">
+  <div class="overlay-card done">
+    <div class="done-head">
+      <div class="done-ring"><div class="done-dot"></div></div>
+      <div class="done-title">All set</div>
+    </div>
+    <div class="done-body">
+      Your prompts have been saved and the pipeline can continue.
+      You can safely close this tab and go back to the terminal.
+    </div>
+    <div class="done-actions">
+      <button id="closeDoneBtn" type="button" class="btn-ghost btn">Close</button>
+      <a href="{{ url_for('results.page') }}" class="btn btn-primary">Open results page</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script id="frames-data" type="application/json">{{ frames|tojson }}</script>
+<script src="{{ url_for('static', filename='js/picker.js') }}"></script>
+{% endblock %}

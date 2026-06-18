@@ -1,0 +1,12 @@
+# List all active jobs
+~/worker-venv/bin/python3 cancel_jobs.py --list
+
+# Cancel all active jobs
+~/worker-venv/bin/python3 cancel_jobs.py
+
+# Cancel a specific job
+~/worker-venv/bin/python3 cancel_jobs.py <job_id>
+
+
+#worker poller
+ ~/worker-venv/bin/python3 SAM2/app/worker_poller.py

@@ -13,7 +13,7 @@ DIRECTUS_URL = "https://textailes.athenarc.gr"
 COOKIE_NAME = "textailes_refresh_token"
 
 LOGIN_URL = "https://textailes.athenarc.gr/archive/user/login"
-APP_BASE  = "http://nephele.textailes.athenarc.gr:8093"  
+APP_BASE  = "http://nephele.textailes.athenarc.gr:8093"  # Χρησιμοποιείται για redirect μετά το login
 
 
 PUBLIC_PATHS = {"/health"}          

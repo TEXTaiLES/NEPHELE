@@ -52,7 +52,6 @@ def upload_reconstruction(scan_id, model_dir):
 
             f = open(file_path, 'rb')
             open_files.append(f)
-
             files_payload.append(('file', (filename, f, content_type)))
 
         # 3. Prepare Form Data
@@ -85,6 +84,7 @@ def upload_reconstruction(scan_id, model_dir):
 
     except Exception as e:
         logger.error(f"An error occurred: {e}")
+
     finally:
         for f in open_files:
             f.close()

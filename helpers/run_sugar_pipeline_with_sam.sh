@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+
 
 # ===== BASIC SAFE DEFAULTS (robust paths) =====
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -122,7 +124,10 @@ echo "[*] STEP 1: Directories prepared"
 
 # ========= PRE-FLIGHT: Ensure images are JPG and COLMAP references match =========
 echo "[*] PRE-FLIGHT: Ensuring all images are JPG and COLMAP references match"
-SUGAR_DATA_ROOT="$SUGAR_DATA_ROOT" python3 - <<'PREFLIGHT'
+docker run --rm \
+  -v "$SUGAR_DATA_ROOT:/app/data" \
+  -e SUGAR_DATA_ROOT=/app/data \
+  sugar:local /opt/conda/envs/sugar/bin/python3 - <<'PREFLIGHT'
 import os, struct, glob, shutil, re
 from PIL import Image
 
@@ -210,6 +215,7 @@ ENV_COMMON=(
   -e TRANSFORMERS_CACHE=/app/.cache/hf
   -e HUGGINGFACE_HUB_CACHE=/app/.cache/hf
   -e MPLBACKEND=Agg
+  -e PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
 )
 
 DOCKER_COMMON=(
@@ -331,7 +337,14 @@ echo "[*] STEP 5b: Mesh cleanup (small components + base crop)"
 BOTTOM_CROP_PCT="${BOTTOM_CROP_PCT:-22}"
 MESH_OBJ=$(find "$SUGAR_OUT_ROOT/refined_mesh" -name "*_postprocessed.obj" | grep -v artifacts | grep -v before_cleanup | head -n1 || true)
 if [[ -n "$MESH_OBJ" ]]; then
-  python3 "$SUGAR_PATH/cleanup_mesh.py" "$MESH_OBJ" 0.05 "$BOTTOM_CROP_PCT" 2
+  MESH_IN_CTR="${MESH_OBJ/#$SUGAR_OUT_ROOT//app/output}"
+  run_in_sugar "
+    set -e
+    umask 0002
+    source /opt/conda/etc/profile.d/conda.sh
+    conda activate sugar
+    python /workspace/cleanup_mesh.py $MESH_IN_CTR 0.05 $BOTTOM_CROP_PCT 2
+  "
 else
   echo "[!] No postprocessed .obj found in refined_mesh, skipping cleanup"
 fi

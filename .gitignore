@@ -1,1 +1,34 @@
+# --- python / venv ---
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# --- secrets (per-host, NEVER commit) ---
 .env
+deploy/worker_poller.env
+nefele_ui/.env
+
+# --- runtime data + outputs (never commit, can be large) ---
+SAM2/data/
+data/
+SUGAR/SuGaR/outputs/
+PGSR/
+nefele_ui/data/
+
+# --- per-run logs ---
+logs/
+*.log
+SAM2/logs/
+
+# --- COLMAP scratch ---
+colmap/input/
+colmap/output/
+
+# --- caches / backups / temp ---
+*.bak
+*.tar.gz
+.DS_Store
+*~

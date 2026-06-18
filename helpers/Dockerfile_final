@@ -35,6 +35,8 @@ RUN apt-get install -y libomp-dev && \
 RUN apt-get update && apt-get install -y --no-install-recommends colmap && \
     rm -rf /var/lib/apt/lists/*
 
+RUN python3 -m pip install --break-system-packages pillow 2>/dev/null || python3 -m pip install pillow
+
 RUN rm -f /usr/local/bin/colmap || true
 ENV PATH="/usr/bin:${PATH}"
 # ---- Miniconda ----
@@ -55,8 +57,7 @@ RUN /opt/conda/bin/conda tos accept --channel https://repo.anaconda.com/pkgs/mai
     /opt/conda/bin/conda tos accept --channel https://repo.anaconda.com/pkgs/r && \
     source /opt/conda/etc/profile.d/conda.sh && \
     python install.py && \
-    conda activate sugar && \
-    python -m pip install numpy pillow
+    /opt/conda/envs/sugar/bin/pip install numpy pillow
     
 
     

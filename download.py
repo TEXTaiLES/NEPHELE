@@ -16,67 +16,6 @@ RELATIVE_SAM2_PATH = "./SAMplify_SuGaR/SAM2/data/input"
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
-def get_camera_from_pipeline(pipeline, split: str, index: int, device: str):
-    """
-    Nerfstudio versions differ:
-    - Some datasets return item["cameras"]
-    - Others return only {"image_idx","image"} and cameras live in dataparser_outputs.cameras
-    This function supports both.
-    """
-    dm = getattr(pipeline, "datamanager", None)
-    if dm is None:
-        raise RuntimeError("Pipeline has no datamanager; nerfstudio version mismatch?")
-
-    # 1) Try dataparser outputs cameras (most robust)
-    dpo = None
-    if split == "train":
-        for attr in ["train_dataparser_outputs", "train_dataparser_output", "train_dataparser"]:
-            if hasattr(dm, attr):
-                dpo = getattr(dm, attr)
-                break
-        if dpo is None and hasattr(dm, "train_dataparser_outputs"):
-            dpo = dm.train_dataparser_outputs
-    else:
-        for attr in ["eval_dataparser_outputs", "val_dataparser_outputs", "test_dataparser_outputs"]:
-            if hasattr(dm, attr):
-                dpo = getattr(dm, attr)
-                break
-        # some versions keep eval outputs only
-        if dpo is None and hasattr(dm, "eval_dataparser_outputs"):
-            dpo = dm.eval_dataparser_outputs
-
-    if dpo is not None and hasattr(dpo, "cameras"):
-        cams = dpo.cameras  # Cameras object with batch dimension = num images
-        # Some datasets are wrapped; index is within that split ordering.
-        cam = cams[index : index + 1].to(device)
-        return cam
-
-    # 2) Fallback: try dataset item
-    dataset = None
-    if split == "train" and hasattr(dm, "train_dataset"):
-        dataset = dm.train_dataset
-    elif split in ["val", "test"] and hasattr(dm, "eval_dataset"):
-        dataset = dm.eval_dataset
-
-    if dataset is None:
-        raise RuntimeError(f"Couldn't find dataset/dataparser_outputs for split={split}.")
-
-    item = dataset[index]
-    if "cameras" in item:
-        return item["cameras"].to(device)
-    if "camera" in item:
-        return item["camera"].to(device)
-
-    # 3) Fallback using image_idx -> cameras
-    if "image_idx" in item:
-        img_i = int(item["image_idx"])
-        # try again: some versions store cameras on dataset itself
-        if hasattr(dataset, "cameras"):
-            cam = dataset.cameras[img_i : img_i + 1].to(device)
-            return cam
-
-    raise RuntimeError(f"Dataset item has no camera key. Keys={list(item.keys())}")
-
 
 def download_scan(scan_id):
     if not scan_id:
@@ -138,12 +77,14 @@ def download_scan(scan_id):
                 if os.path.exists(save_path):
                     continue
 
-                # Download with basic retry
+                # Download with proxy authentication and streaming
                 try:
-                    img_resp = requests.get(image_url, timeout=10)
+                    img_resp = requests.get(image_url, headers=headers, stream=True, timeout=10)
                     if img_resp.status_code == 200:
                         with open(save_path, 'wb') as f:
-                            f.write(img_resp.content)
+                            for chunk in img_resp.iter_content(chunk_size=1024 * 1024):
+                                if chunk:
+                                    f.write(chunk)
                         total_downloaded += 1
                         print(f"   Downloaded: {filename}", end='\r')
                     else:

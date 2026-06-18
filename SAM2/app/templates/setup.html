@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Point Picker — Setup{% endblock %}
+{% block body_class %}centered{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/setup.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="hero">
+    <img class="hero-logo"
+         src="{{ url_for('static', filename='img/nephele-logo.png') }}"
+         alt="Nephele"
+         onerror="this.style.display='none'">
+    <span class="badge"><span class="dot"></span> Setup</span>
+    <div class="title">New dataset</div>
+    <div class="spacer"></div>
+    <a href="{{ url_for('welcome.welcome') }}" class="btn btn-ghost">Home</a>
+  </div>
+
+  <div class="card" style="gap:0;padding:0;overflow:hidden;">
+
+    <!-- Source tabs -->
+    <div class="src-tabs">
+      <button class="src-tab active" data-tab="local">
+        <span class="src-tab-icon">💻</span> Upload from computer
+      </button>
+      <button class="src-tab" data-tab="hestia">
+        <span class="src-tab-icon">🌐</span> Load from HESTIA
+      </button>
+    </div>
+
+    <!-- ── Model selector (shared between both tabs) ── -->
+    <div class="model-row">
+      <span class="model-label">3D Model</span>
+      <div class="model-toggle">
+        <label class="model-opt">
+          <input type="radio" name="modelChoice" id="modelSugar" value="sugar" checked>
+          <span class="model-opt-label">SuGaR <span class="model-badge model-badge-default">default</span></span>
+        </label>
+        <label class="model-opt">
+          <input type="radio" name="modelChoice" id="modelPgsr" value="pgsr">
+          <span class="model-opt-label">PGSR</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- ── LOCAL UPLOAD PANEL ── -->
+    <div id="panelLocal" class="src-panel" style="padding:20px 18px;">
+      <form id="setupForm" autocomplete="off" style="display:flex;flex-direction:column;gap:14px;">
+        <label class="field">
+          <span class="label">Dataset name</span>
+          <input
+            id="datasetName"
+            name="name"
+            type="text"
+            placeholder="my_run_2026_05"
+            value="{{ current_name }}"
+            required
+            pattern="[A-Za-z0-9._\-]+"
+            title="Letters, digits, dot, dash, underscore only.">
+          <span class="hint">Will be created at <code>{{ in_mnt }}/&lt;name&gt;/</code>. Existing folders are appended to.</span>
+        </label>
+
+        <div id="dropzone" class="dropzone" tabindex="0">
+          <input id="fileInput" type="file" name="images" accept="image/*" multiple hidden>
+          <div class="dropzone-inner">
+            <div class="dropzone-icon">+</div>
+            <div class="dropzone-title">Drop images here</div>
+            <div class="dropzone-sub">or click to browse — any image format (auto-converted to JPG)</div>
+          </div>
+        </div>
+
+        <ul id="fileList" class="file-list" hidden></ul>
+
+        <div class="row">
+          <div class="muted" id="statusLine">No files staged.</div>
+          <div class="spacer"></div>
+          <button id="submitBtn" class="btn btn-primary" type="submit" disabled>Upload &amp; continue</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ── HESTIA PANEL ── -->
+    <div id="panelHestia" class="src-panel" hidden style="padding:16px 18px;">
+
+      <div id="hestiaLoading" style="display:flex;align-items:center;gap:10px;padding:8px 0;">
+        <div class="dots-row">
+          <div class="dot-bounce"></div>
+          <div class="dot-bounce" style="animation-delay:.12s"></div>
+          <div class="dot-bounce" style="animation-delay:.24s"></div>
+        </div>
+        <span class="muted" style="font-size:13px;">Fetching scans from HESTIA…</span>
+      </div>
+
+      <div id="hestiaError" class="muted" style="font-size:13px;display:none;"></div>
+
+      <ul id="hestiaList" class="hestia-list" style="display:none;"></ul>
+
+      <!-- Name step (shown when Load is clicked, before download starts) -->
+      <div id="hestiaNamingCard" style="display:none;flex-direction:column;gap:12px;padding:4px 0;">
+        <div style="font-weight:700;font-size:14px;">Name this dataset</div>
+        <label class="field" style="gap:5px;">
+          <span class="label" style="font-size:12.5px;">Dataset name</span>
+          <input id="hestiaDsName" type="text"
+                 pattern="[A-Za-z0-9._\-]+"
+                 title="Letters, digits, dot, dash, underscore only."
+                 autocomplete="off"
+                 style="font-size:13px;padding:8px 10px;">
+        </label>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button id="hestiaNamingCancel" class="btn btn-ghost" type="button">Cancel</button>
+          <button id="hestiaNamingConfirm" class="btn btn-primary" type="button">Start download</button>
+        </div>
+      </div>
+
+      <!-- Download progress (shown after name confirmed) -->
+      <div id="hestiaDlCard" style="display:none;flex-direction:column;gap:10px;padding:8px 0;">
+        <div style="font-weight:700;font-size:14px;">Downloading scan…</div>
+        <div class="muted" id="hestiaDlSub" style="font-size:13px;">Starting…</div>
+        <div class="hestia-progress-bar">
+          <div class="hestia-progress-fill" id="hestiaDlFill"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="loadingOverlay" class="overlay">
+  <div class="overlay-card">
+    <div class="dots-row">
+      <div class="dot-bounce" style="animation-delay:0s;"></div>
+      <div class="dot-bounce" style="animation-delay:0.12s;"></div>
+      <div class="dot-bounce" style="animation-delay:0.24s;"></div>
+    </div>
+    <div class="overlay-label">Uploading…</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/setup.js') }}"></script>
+{% endblock %}

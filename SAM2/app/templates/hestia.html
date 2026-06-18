@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}HESTIA — Load Scan{% endblock %}
+{% block body_class %}centered{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/hestia.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="hero">
+    <img class="hero-logo"
+         src="{{ url_for('static', filename='img/nephele-logo.png') }}"
+         alt="Nephele"
+         onerror="this.style.display='none'">
+    <span class="badge"><span class="dot"></span> HESTIA</span>
+    <div class="title">Load scan from HESTIA</div>
+    <div class="spacer"></div>
+    <a href="{{ url_for('welcome.welcome') }}" class="btn btn-ghost">Home</a>
+  </div>
+
+  <div id="loadingCard" class="card hestia-loading">
+    <div class="dots-row">
+      <div class="dot-bounce"></div>
+      <div class="dot-bounce" style="animation-delay:.12s"></div>
+      <div class="dot-bounce" style="animation-delay:.24s"></div>
+    </div>
+    <span class="muted">Fetching scans from HESTIA…</span>
+  </div>
+
+  <div id="errorCard" class="card" hidden>
+    <div class="hestia-error-msg muted" id="errorMsg"></div>
+  </div>
+
+  <div id="scansCard" class="card" hidden>
+    <div class="row" style="margin-bottom:12px">
+      <div class="title" style="font-size:16px">
+        <span id="scanCount">0</span> scan<span id="scanPlural">s</span> available
+      </div>
+    </div>
+    <ul id="scansList" class="hestia-list"></ul>
+  </div>
+
+  <!-- Download progress overlay -->
+  <div id="downloadCard" class="card hestia-download-card" hidden>
+    <div class="hestia-dl-title">Downloading scan…</div>
+    <div class="muted hestia-dl-sub" id="dlSub">Starting…</div>
+    <div class="hestia-progress-bar">
+      <div class="hestia-progress-fill" id="dlFill"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/hestia.js') }}"></script>
+{% endblock %}
