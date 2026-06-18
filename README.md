@@ -26,9 +26,28 @@ git clone --recurse-submodules -b nefele-training \
 cd SAMplify_SuGaR
 ```
 
+If you forgot `--recurse-submodules`:
+```bash
+git submodule update --init --recursive
+```
+
 ---
 
-## 2. Configure
+## 2. Prepare your dataset
+
+Place `.jpg` images inside:
+```
+SAM2/data/input/<your_dataset_name>/
+```
+
+```bash
+mkdir -p SAM2/data/input/<your_dataset_name>
+# copy your images there
+```
+
+---
+
+## 4. Configure
 
 ```bash
 cp .env.example .env
@@ -46,7 +65,7 @@ Then open `.env` and fill in the two secrets:
 
 ---
 
-## 3. Build & start containers
+## 5. Build & start containers
 
 ```bash
 docker compose build
@@ -57,7 +76,7 @@ docker compose up -d sam2 colmap pgsr
 
 ---
 
-## 4. UI (optional — skip if using the standalone nefele_ui branch)
+## 6. UI (optional — skip if using the standalone nefele_ui branch)
 
 ```bash
 cp nefele_ui/.env.example nefele_ui/.env
@@ -74,7 +93,7 @@ UI will be available at `http://localhost:8092` (or the `WEB_PORT` you set).
 
 ---
 
-## 5. Worker poller (vm_comms mode)
+## 7. Worker poller (vm_comms mode)
 
 The poller runs on the host (not in a container) and drives the pipeline when jobs arrive from HESTIA.
 
@@ -101,6 +120,21 @@ journalctl -u worker_poller -f
 - `deploy/README.md` — more detail on the worker poller
 - `nefele_ui/docs/vm_comms_contract.md` — job schema and API contract
 - `Documentation.md` — shared_fs / legacy mode
+
+---
+
+## Citation
+
+```bibtex
+@software{Nephele_TEXTaiLES_2026,
+  author  = {{Athena Research Center}},
+  title   = {{Nephele: SAM2 + COLMAP + SuGaR pipeline for background-free 3D mesh reconstruction}},
+  url     = {https://github.com/TEXTaiLES/SAMplify_SuGaR},
+  version = {0.1.0},
+  year    = {2025},
+  license = {MIT}
+}
+```
 
 ---
 
