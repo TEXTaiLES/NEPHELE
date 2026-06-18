@@ -1,0 +1,6 @@
+flask==3.0.3
+pillow
+python-dotenv
+requests
+flask-login
+opencv-python-headless

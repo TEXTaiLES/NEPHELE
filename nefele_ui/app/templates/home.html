@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Point Picker — {{ ds }}{% endblock %}
+{% block body_class %}centered{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="hero">
+    <img class="hero-logo"
+         src="{{ url_for('static', filename='img/nephele-logo.png') }}"
+         alt="Nephele"
+         onerror="this.style.display='none'">
+    <span class="badge"><span class="dot"></span> Interactive Picker</span>
+    <div class="title">Point Picker — <span class="muted">{{ ds }}</span></div>
+    <div class="spacer"></div>
+    <div class="pill">Frames: {{ nframes }}</div>
+  </div>
+
+  {% if exists %}
+  <div class="card">
+    <div class="row">
+      <div class="title">A prompts.json already exists</div>
+      <div class="spacer"></div>
+      <form method="post" action="{{ url_for('home.use_existing') }}">
+        <button class="btn" type="submit">Use existing</button>
+      </form>
+      <form method="post" action="{{ url_for('home.create_new') }}">
+        <button class="btn btn-primary" type="submit">Create new</button>
+      </form>
+    </div>
+    <div class="muted">Choose whether to continue with the saved prompts or start fresh.</div>
+  </div>
+  {% else %}
+  <div class="card">
+    <div class="row">
+      <div class="title">No prompts yet</div>
+      <div class="spacer"></div>
+      <form method="get" action="{{ url_for('picker.pick') }}">
+        <button class="btn btn-primary" type="submit">Open picker</button>
+      </form>
+    </div>
+    <div class="muted">Start the interactive picker to add POS/NEG points.</div>
+  </div>
+  {% endif %}
+
+  <div class="files">
+    <div class="title" style="font-size:16px;">Files</div>
+    <ul>
+      <li><strong>PROMPTS_JSON:</strong> {{ prompts }}</li>
+      <li><strong>DONE_FLAG:</strong> {{ done }}</li>
+      <li><strong>USE_EXISTING:</strong> {{ use_existing }}</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

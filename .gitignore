@@ -1,0 +1,4 @@
+SAM2/data/input/*
+!SAM2/data/input/.gitkeep
+SAM2/data/output/*
+!SAM2/data/output/.gitkeep

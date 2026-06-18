@@ -1,0 +1,78 @@
+# Standalone Nefele UI — extracted from the samplify_sugar repo so it can be
+# hosted on its own server.
+#
+# NOTE: the preview / pipeline-status / local-results features still expect a
+# shared filesystem with the SAM2 worker (the /data volumes below) and a
+# reachable WORKER_URL. Until the vm_comms API refactor lands, either run this
+# next to the worker or point the volumes at a shared network mount.
+# The HESTIA-backed flows (scan browsing, reconstruction upload) already work
+# over HTTP and need only HESTIA_API_URL / HESTIA_API_KEY in .env.
+services:
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    image: nefele-ui:local
+    container_name: ${UI_CONTAINER_NAME:-nefele-ui}
+    volumes:
+      # Share the same disk as the samplify_sugar SAM2/SuGaR/PGSR pipeline so
+      # this UI can drive the legacy shared_fs flow against the existing
+      # worker containers (sam2, sugar, pgsr) on the samplify_sugar network.
+      # Override SAMPLIFY_ROOT in .env to point at a different host path.
+      - ${SAMPLIFY_ROOT:-/home/vaia/samplify_sugar}/SAM2/data/input:/data/in
+      - ${SAMPLIFY_ROOT:-/home/vaia/samplify_sugar}/SAM2/data/output:/data/out
+      - ${SAMPLIFY_ROOT:-/home/vaia/samplify_sugar}/SUGAR/SuGaR/outputs:/data/results/sugar:ro
+      - ${SAMPLIFY_ROOT:-/home/vaia/samplify_sugar}/PGSR/outputs:/data/results/pgsr:ro
+    environment:
+      - DATASET_NAME=${DATASET_NAME:-}
+      - IN_MNT=/data/in
+      - OUT=/data/out
+      - INDEX_SUFFIX=_indexed
+      - COMMS_BACKEND=${COMMS_BACKEND:-shared_fs}
+      - VM_COMMS_POLL_INTERVAL=${VM_COMMS_POLL_INTERVAL:-2}
+      - WORKER_URL=${WORKER_URL:-http://sam2:5001}
+      - WORKER_TIMEOUT=${WORKER_TIMEOUT:-600}
+      - AUTH_ENABLED=${AUTH_ENABLED:-0}
+      # Required when AUTH_ENABLED=1 — signs the Flask session cookie that
+      # caches the Directus access_token between requests. Generate with:
+      #   python -c 'import secrets; print(secrets.token_hex(32))'
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-}
+      - DIRECTUS_URL=${DIRECTUS_URL:-https://textailes.athenarc.gr}
+      - DIRECTUS_LOGIN_URL=${DIRECTUS_LOGIN_URL:-}
+      # - APP_BASE=${APP_BASE:-https://nephele.textailes.athenarc.gr}
+      - AUTH_COOKIE_NAME=${AUTH_COOKIE_NAME:-textailes_refresh_token}
+      - AUTH_COOKIE_DOMAIN=${AUTH_COOKIE_DOMAIN:-.textailes.athenarc.gr}
+      - SUGAR_RESULTS_ROOT=/data/results/sugar
+      - PGSR_RESULTS_ROOT=/data/results/pgsr
+    env_file:
+      - .env
+    ports:
+      - "${WEB_PORT:-8092}:5000"
+    command: ["python3", "-u", "-m", "app.wsgi"]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    restart: "no"
+    networks:
+      - default
+      - hestia
+      - textailes
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nephele.rule=Host(`nephele.textailes.athenarc.gr`)"
+      - "traefik.http.routers.nephele.entrypoints=websecure"
+      - "traefik.http.routers.nephele.tls.certresolver=le"
+      - "traefik.http.services.nephele.loadbalancer.server.port=5000"
+
+# Join HESTIA's docker network so the UI can talk to it by service name
+# (HESTIA_API_URL=http://api:5000, MinIO at http://minio:9000, etc.). HESTIA
+# declares this network in its own docker-compose.yml as `textailes` and the
+# resulting Docker network is `<project>_textailes`. Adjust the `name:` below
+# if your HESTIA stack names it differently.
+networks:
+  hestia:
+    external: true
+    name: ${HESTIA_NETWORK:-docker_textailes}
+  textailes:
+    external: true

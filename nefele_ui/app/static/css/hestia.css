@@ -1,0 +1,115 @@
+.hestia-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 18px;
+}
+
+.hestia-error-msg {
+  padding: 4px 0;
+  font-size: 14px;
+}
+
+/* Scan list */
+.hestia-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hestia-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.hestia-item:hover {
+  background: rgba(10, 132, 255, 0.08);
+  border-color: rgba(10, 132, 255, 0.3);
+}
+
+.hestia-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(10, 132, 255, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.hestia-meta {
+  flex: 1;
+  min-width: 0;
+}
+.hestia-scan-id {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: "SF Mono", "Fira Code", monospace;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hestia-scan-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.hestia-load-btn {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.hestia-load-btn:hover { opacity: .85; }
+.hestia-load-btn:disabled { opacity: .4; cursor: default; }
+
+/* Download progress */
+.hestia-download-card {
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 18px;
+}
+.hestia-dl-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+.hestia-dl-sub {
+  font-size: 13px;
+}
+
+.hestia-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.hestia-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  width: 0%;
+  transition: width .4s ease;
+  animation: progressPulse 1.5s ease-in-out infinite;
+}
+@keyframes progressPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .6; }
+}

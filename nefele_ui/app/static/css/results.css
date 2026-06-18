@@ -1,0 +1,172 @@
+.results-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.results-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  transition: transform .08s ease, box-shadow .15s ease;
+}
+.results-list li:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+}
+
+.kind-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+.kind-pill.obj     { background: rgba(10, 132, 255, 0.16); color: var(--accent); }
+.kind-pill.mtl     { background: rgba(175, 82, 222, 0.18); color: #af52de; }
+.kind-pill.texture { background: rgba(52, 199, 89, 0.18); color: var(--pos); }
+
+.file-name {
+  flex: 1 1 auto;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-meta {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.file-meta .dot-sep { opacity: 0.5; }
+
+.results-download {
+  appearance: none;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.85);
+  color: #111;
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.results-download:hover { background: #fff; }
+
+.dots-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.dot-bounce {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: bounceDot 0.7s ease-in-out infinite;
+}
+@keyframes bounceDot {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40%           { transform: translateY(-4px); opacity: 1; }
+}
+
+#statusPill.ready { background: rgba(52, 199, 89, 0.18); color: var(--pos); }
+#statusPill.waiting { background: rgba(255, 159, 10, 0.18); color: #ff9f0a; }
+#statusPill.error { background: rgba(255, 59, 48, 0.18); color: var(--neg); }
+
+/* Stage indicator */
+.stages-card { padding: 14px 18px; gap: 10px; }
+
+.stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.stage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  transition: background .2s ease, border-color .2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stage-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--muted);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.04);
+  transition: background .2s ease, box-shadow .2s ease;
+}
+
+.stage-name { font-weight: 700; letter-spacing: .2px; font-size: 14px; }
+
+.stage.pending { opacity: 0.55; }
+.stage.pending .stage-name { color: var(--muted); }
+
+.stage.running {
+  border-color: rgba(10, 132, 255, 0.55);
+  background: rgba(10, 132, 255, 0.08);
+}
+.stage.running .stage-dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.22);
+  animation: stagePulse 1.2s ease-in-out infinite;
+}
+@keyframes stagePulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.22); }
+  50%      { box-shadow: 0 0 0 8px rgba(10, 132, 255, 0.08); }
+}
+
+.stage.done {
+  border-color: rgba(52, 199, 89, 0.35);
+  background: rgba(52, 199, 89, 0.06);
+}
+.stage.done .stage-dot {
+  background: var(--pos);
+  box-shadow: 0 0 0 4px rgba(52, 199, 89, 0.18);
+}
+
+.stage.error {
+  border-color: rgba(255, 59, 48, 0.45);
+  background: rgba(255, 59, 48, 0.08);
+}
+.stage.error .stage-dot {
+  background: var(--neg);
+  box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.18);
+}
+
+.stage-message {
+  font-size: 13px;
+  min-height: 18px;
+}
+
+@media (max-width: 760px) {
+  .stages { grid-template-columns: 1fr; }
+}
