@@ -10,9 +10,8 @@ load_dotenv()
 HESTIA_API_URL = f"{os.getenv('HESTIA_API_URL', 'http://api.textailes.athenarc.gr')}/robot-images"
 API_KEY = os.getenv('HESTIA_API_KEY')
 
-# Based on run_pipeline.sh, SAM2 expects: .../SAM2/data/input/<DATASET_NAME>
-# Adjust RELATIVE_SAM2_PATH to point to your SAM2 folder relative to this script
-RELATIVE_SAM2_PATH = "./SAMplify_SuGaR/SAM2/data/input"
+# SAM2 expects input images at: <repo>/SAM2/data/input/<DATASET_NAME>
+RELATIVE_SAM2_PATH = "../SAM2/data/input"
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
@@ -102,7 +101,7 @@ def download_scan(scan_id):
     print("")
     if total_downloaded > 0:
         logger.info(f"Batch Complete. {total_downloaded} new images saved.")
-        logger.info(f"To run reconstruction: ./run_pipeline.sh {dataset_name}")
+        logger.info(f"To run reconstruction: bash scripts/run_pipeline.sh {dataset_name}")
     else:
         logger.info("No new images found or downloaded.")
 

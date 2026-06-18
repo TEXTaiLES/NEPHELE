@@ -14,14 +14,15 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
-SAM2_OUT="$SCRIPT_DIR/SAM2/data/output"
+SAM2_OUT="$REPO_ROOT/SAM2/data/output"
 
 INTERVAL="${PIPELINE_WATCH_INTERVAL:-3}" # seconds between scans
 
-mkdir -p "$SCRIPT_DIR/logs"
+mkdir -p "$REPO_ROOT/logs"
 
-LOGFILE="$SCRIPT_DIR/logs/pipeline_watcher.log"
+LOGFILE="$REPO_ROOT/logs/pipeline_watcher.log"
 
 log() { printf '[%s] %s\n' "$(date -Is)" "$*" | tee -a "$LOGFILE"; }
 
@@ -44,10 +45,10 @@ touch "$processed"
 
 (
 
-cd "$SCRIPT_DIR"
+cd "$REPO_ROOT"
 
-bash ./run_pipeline.sh "$dataset" \
->> "$SCRIPT_DIR/logs/pipeline_watcher_${dataset}.log" 2>&1 \
+bash "$SCRIPT_DIR/run_pipeline.sh" "$dataset" \
+>> "$REPO_ROOT/logs/pipeline_watcher_${dataset}.log" 2>&1 \
 || log "pipeline for '$dataset' exited non-zero (see logs)"
 
 ) &

@@ -24,7 +24,7 @@ EnvironmentFile=/opt/samplify_sugar/deploy/worker_poller.env
 Environment=IN_MNT=/opt/samplify_sugar/SAM2/data/input
 Environment=OUT=/opt/samplify_sugar/SAM2/data/output
 Environment=INDEX_SUFFIX=_indexed
-Environment=PIPELINE_SCRIPT=/opt/samplify_sugar/run_pipeline.sh
+Environment=PIPELINE_SCRIPT=/opt/samplify_sugar/scripts/run_pipeline.sh
 Environment=COMPOSE_DIR=/opt/samplify_sugar
 Environment=SAM2_SERVICE=sam2
 

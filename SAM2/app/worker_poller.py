@@ -107,7 +107,7 @@ if not API_KEY:
     raise RuntimeError("HESTIA_API_KEY is empty. Set it in .env to authenticate with HESTIA.")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent          # .../SAM2
-PIPELINE_SCRIPT = Path(os.environ.get("PIPELINE_SCRIPT", REPO_ROOT.parent / "run_pipeline.sh"))
+PIPELINE_SCRIPT = Path(os.environ.get("PIPELINE_SCRIPT", REPO_ROOT.parent / "scripts" / "run_pipeline.sh"))
 
 # The poller runs on the SAM VM host and drives the dockerised pipeline.
 # COMPOSE_DIR holds docker-compose.yml; SAM2 preview runs inside the `sam2`

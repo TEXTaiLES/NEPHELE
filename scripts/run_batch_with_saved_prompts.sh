@@ -9,7 +9,8 @@ set -euo pipefail
 # Usage:
 #   ./run_batch_with_saved_prompts.sh
 
-NEP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NEP="$(dirname "$SCRIPT_DIR")"
 SUBDIR="all_faces_sculpted"
 LOG_DIR="$NEP/logs/$SUBDIR"
 mkdir -p "$LOG_DIR"
@@ -68,9 +69,9 @@ printf '%s\n' "${GROUP1[@]}" > "$LIST1"
 echo "Worker 0 on GPU 0: ${#GROUP0[@]} datasets"
 echo "Worker 1 on GPU 3: ${#GROUP1[@]} datasets"
 
-./worker.sh 0 0 "$LIST0" >"$LOG_DIR/worker0_gpu0.log" 2>&1 &
+"$SCRIPT_DIR/worker.sh" 0 0 "$LIST0" >"$LOG_DIR/worker0_gpu0.log" 2>&1 &
 PID0=$!
-./worker.sh 1 3 "$LIST1" >"$LOG_DIR/worker1_gpu3.log" 2>&1 &
+"$SCRIPT_DIR/worker.sh" 1 3 "$LIST1" >"$LOG_DIR/worker1_gpu3.log" 2>&1 &
 PID1=$!
 
 RC0=0

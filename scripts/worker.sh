@@ -8,7 +8,8 @@ GPU_ID="${2:?}"
 
 LIST_FILE="${3:?}"
 
-NEP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NEP="$(dirname "$SCRIPT_DIR")"
 
 cd "$NEP"
 
@@ -56,7 +57,7 @@ fi
 
 echo "[W${WORKER_ID}] === Running: $DATASET ==="
 
-./run_pipeline.sh "$DATASET" </dev/null || { echo "[W${WORKER_ID}] Pipeline FAILED for $DATASET"; continue; }
+bash "$NEP/scripts/run_pipeline.sh" "$DATASET" </dev/null || { echo "[W${WORKER_ID}] Pipeline FAILED for $DATASET"; continue; }
 
 echo "[W${WORKER_ID}] === Finished: $DATASET ==="
 

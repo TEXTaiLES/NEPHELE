@@ -17,6 +17,7 @@ set -euo pipefail
 DATASET_NAME="${1:-}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # PIPELINE_MODE and other knobs are set by worker_poller.py (which loads .env
 # before spawning this script). For manual runs without worker_poller, export
@@ -51,7 +52,7 @@ export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-2}"
 
 # ====== PATHS ======
 
-nephele_PATH="${nephele_PATH:-$SCRIPT_DIR}"
+nephele_PATH="${nephele_PATH:-$REPO_ROOT}"
 export nephele_PATH
 
 SAM2_PATH="${SAM2_PATH:-${nephele_PATH}/SAM2}"
@@ -647,7 +648,7 @@ if [[ "$PIPELINE_MODEL" == "pgsr" ]]; then
 	DATASET_NAME="$DATASET_NAME" \
 		nephele_PATH="$nephele_PATH" \
 		COLMAP_OUT_PATH="$COLMAP_OUT_PATH" \
-		bash "$nephele_PATH/run_pgsr_pipeline_with_sam.sh" "$DATASET_NAME"
+		bash "$nephele_PATH/scripts/run_pgsr_pipeline_with_sam.sh" "$DATASET_NAME"
 
 else
 	# --- run SUGAR ---

@@ -31,7 +31,7 @@ docker compose ps
 3. Run the pipeline (this script will still start sam2 if needed):
 
 ```bash
-./run_pipeline.sh <DATASET_NAME>
+scripts/run_pipeline.sh <DATASET_NAME>
 ```
 
 Notes & tips

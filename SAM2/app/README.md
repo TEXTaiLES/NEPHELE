@@ -135,10 +135,10 @@ don't need to rebuild the image for Python / template / CSS / JS changes.
 
 ```bash
 # Explicit dataset name (matches old behavior)
-./run_pipeline.sh dress
+scripts/run_pipeline.sh dress
 
 # No name → UI boots in setup mode; pipeline waits for the user to upload
-./run_pipeline.sh
+scripts/run_pipeline.sh
 ```
 
 When the user submits `/setup`, the script reads the chosen name from
@@ -210,7 +210,7 @@ terminal babysitting required.
 
 ```bash
 # in tmux, screen, or systemd; works fine with nohup too:
-nohup ./pipeline_watcher.sh > /dev/null 2>&1 &
+nohup scripts/pipeline_watcher.sh > /dev/null 2>&1 &
 ```
 
 It scans `SAM2/data/output/*_indexed/` every 3 seconds and marks each flag as
