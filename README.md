@@ -1,88 +1,36 @@
-# Nephele
+# Nefele UI
 
-**Nephele** processes images to generate background-free 3D meshes by combining SAM2 (segmentation), COLMAP (structure-from-motion), and SuGaR (Gaussian splatting).
+Upload images, pick points, and download your 3D model.
 
----
-
-## Requirements
-
-- Docker & Docker Compose
-- NVIDIA GPU + CUDA drivers (for SAM2 / SuGaR pipeline)
-- Python 3.11+ (for local dev only)
+**Open in your browser:** https://nephele.textailes.athenarc.gr
 
 ---
 
-## 1. Clone
+## Setup (first time only)
 
-```bash
-git clone --recurse-submodules https://github.com/TEXTaiLES/SAMplify_SuGaR
-cd SAMplify_SuGaR
-```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/TEXTaiLES/SAMplify_SuGaR.git
+   cd SAMplify_SuGaR/nefele_ui
+   ```
 
-If you forgot `--recurse-submodules`:
-```bash
-git submodule update --init --recursive
-```
+2. Copy the config file:
+   ```bash
+   cp .env.example .env
+   ```
 
----
+3. Open `.env` and fill in:
+   - `SAMPLIFY_ROOT` — path to the project folder on this machine
+   - `HESTIA_API_KEY` — your API key
 
-## 2. Set environment variable
-
-```bash
-export nephele_PATH="/absolute/path/to/SAMplify_SuGaR"
-```
-
----
-
-## 3. Prepare your dataset
-
-Place `.jpg` images inside:
-```
-SAM2/data/input/<your_dataset_name>/
-```
+4. Start:
+   ```bash
+   docker compose up --build -d
+   ```
 
 ---
 
-## 4. Run the pipeline
-
-```bash
-bash run_pipeline.sh <your_dataset_name>
-```
-
-Outputs are written to `SAM2/data/output/` and `SUGAR/SuGaR/outputs/`.
-
----
-
-## 5. Nefele UI
-
-The UI lets you pick segmentation points and monitor pipeline progress.
-
-### Setup
-
-```bash
-cd nefele_ui
-cp .env.example .env
-```
-
-Edit `.env` — the key values:
-
-| Variable | Description |
-|---|---|
-| `SAMPLIFY_ROOT` | Absolute path to this repo on the host |
-| `WEB_PORT` | Port to expose the UI (default `8092`) |
-| `HOST_UID` / `HOST_GID` | Match the owner of `SAM2/data` (run `id` to check) |
-| `WORKER_URL` | SAM2 worker endpoint (default `http://sam2:5001`) |
-| `HESTIA_API_KEY` | Required for scan browsing / upload features |
-
-### Start
-
-```bash
-docker compose up --build -d
-```
-
-UI is available at `http://localhost:8092`.
-
-### Stop
+## Stop
 
 ```bash
 docker compose down
@@ -90,36 +38,63 @@ docker compose down
 
 ---
 
-## Project structure
+# UI Usage
 
-```
-SAMplify_SuGaR/
-├── SAM2/            # Segmentation pipeline (Docker)
-│   └── data/
-│       ├── input/   # Put your images here
-│       └── output/  # Segmentation results
-├── SUGAR/           # 3D mesh reconstruction (Docker)
-├── PGSR/            # Alternative Gaussian renderer (Docker)
-├── nefele_ui/       # Web UI (Flask + Docker)
-├── colmap/          # COLMAP helpers
-└── run_pipeline.sh  # End-to-end runner
-```
+## Overview
+This project uses the SAM2 and SuGaR frameworks for 3D reconstruction of images, generating high-quality models with background removal. By clicking on points of interest in an image, the SAM2 model generates a mask that isolates the target object.
 
----
+## Workflow
 
-## Citation
+### Get Started: Stages of Nephele
+<p align="center">
+  <img src="readme_images/get_started.png" width="1280">
+</p>
 
-```bibtex
-@software{Nephele_TEXTaiLES_2026,
-  author  = {{Athena Research Center}},
-  title   = {{Nephele: SAM2 + COLMAP + SuGaR pipeline for background-free 3D mesh reconstruction}},
-  url     = {https://github.com/TEXTaiLES/SAMplify_SuGaR},
-  version = {0.1.0},
-  year    = {2025},
-  license = {MIT}
-}
-```
+### 1. Upload Data
+Users can provide input in one of three ways:
+- Upload images from a local folder.
+- Upload a video, from which frames are automatically extracted.
+- Load an existing scan dataset from **HESTIA**, the database of the TexTaiLES project.
 
-## License
+<p align="center">
+  <img src="readme_images/upload_data.png" alt="Upload data" width="1280">
+</p>
 
-MIT
+### 2. Model Selection
+Choose the Gaussian Splatting model to use: **SuGaR** or **PGSR**.
+
+| Model | When to prefer |
+|---|---|
+| **SuGaR** | Mature, widely used; good general-purpose default |
+| **PGSR** | Better planar surfaces / textiles / thin structures |
+
+<p align="center">
+  <img src="readme_images/pick_model.png" alt="Gaussian Splatting model" width="1280">
+</p>
+
+### 3. Image Loading and Point Annotation
+Load an image, then click to add points of interest:
+- **Left-click** adds a **positive point** (green) — part of the object to keep.
+- **Right-click** adds a **negative point** (red) — part to exclude.
+
+<p align="center">
+  <img src="readme_images/pick_points.png" alt="Point annotation" width="1280">
+</p>
+
+### 4. Generating the Mask with SAM2
+Once enough points are added, SAM2 generates a mask that isolates the object, overlaid on the original image for review.
+
+<p align="center">
+  <img src="readme_images/preview_images.png" alt="Mask preview" width="1280">
+</p>
+
+### 5. Final Output
+After reviewing the preview, click **Continue**. Once processing finishes you can download the final `.obj` file — the object isolated from the background, ready for 3D reconstruction.
+
+<p align="center">
+  <img src="readme_images/result_page.png" alt="Results" width="1280">
+</p>
+
+<p align="center">
+  <img src="readme_images/obj.png" alt="OBJ output" width="640">
+</p>
