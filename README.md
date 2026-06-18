@@ -32,17 +32,17 @@ cd SAMplify_SuGaR
 
 ```bash
 cp .env.example .env
+# auto-fill paths to this checkout
+sed -i "s|/opt/samplify_sugar|$PWD|g" .env
 ```
 
-Edit `.env` and set:
+Then open `.env` and fill in the two secrets:
 
-| Variable        | What to set                                      |
-|-----------------|--------------------------------------------------|
-| `HOST_UID`      | Your user ID (`id -u`)                           |
-| `HOST_GID`      | Your group ID (`id -g`)                          |
-| `HESTIA_API_KEY`| Your HESTIA bearer token                         |
-| `IN_MNT`        | Absolute path to `SAM2/data/input` on this host  |
-| `OUT`           | Absolute path to `SAM2/data/output` on this host |
+| Variable        | What to set              |
+|-----------------|--------------------------|
+| `HESTIA_API_KEY`| Your HESTIA bearer token |
+| `HOST_UID`      | Your user ID (`id -u`)   |
+| `HOST_GID`      | Your group ID (`id -g`)  |
 
 ---
 
@@ -79,6 +79,8 @@ UI will be available at `http://localhost:8092` (or the `WEB_PORT` you set).
 The poller runs on the host (not in a container) and drives the pipeline when jobs arrive from HESTIA.
 
 ```bash
+pip3 install requests
+
 cp deploy/worker_poller.env.example deploy/worker_poller.env
 chmod 600 deploy/worker_poller.env
 $EDITOR deploy/worker_poller.env   # set HESTIA_API_URL and HESTIA_API_KEY
