@@ -10,7 +10,7 @@ Upload images, pick points, and download your 3D model.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/TEXTaiLES/SAMplify_SuGaR.git
+   git clone -b nefele_ui https://github.com/TEXTaiLES/SAMplify_SuGaR.git
    cd SAMplify_SuGaR/nefele_ui
    ```
 
