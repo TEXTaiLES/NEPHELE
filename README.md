@@ -98,3 +98,22 @@ After reviewing the preview, click **Continue**. Once processing finishes you ca
 <p align="center">
   <img src="readme_images/obj.png" alt="OBJ output" width="640">
 </p>
+
+---
+
+## Citation
+
+```bibtex
+@software{Nephele_TEXTaiLES_2026,
+  author  = {{Athena Research Center}},
+  title   = {{Nephele: SAM2 + COLMAP + SuGaR pipeline for background-free 3D mesh reconstruction}},
+  url     = {https://github.com/TEXTaiLES/SAMplify_SuGaR},
+  version = {0.1.0},
+  year    = {2025},
+  license = {MIT}
+}
+```
+
+## License
+
+This project is licensed under the MIT License.
