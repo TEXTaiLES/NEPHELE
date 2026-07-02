@@ -105,15 +105,17 @@ def load_config(user_slug: str = "guest") -> Config:
 
     Dataset name resolution order:
       1. ``<IN_MNT>/<user_slug>/.active_dataset`` file (written by /setup)
-      2. ``DATASET_NAME`` env var (process-wide fallback; ignored once the file exists)
-      3. empty string -> setup mode
+      2. empty string -> setup mode (each user always starts fresh)
+
+    ``DATASET_NAME`` env var is intentionally ignored: in a multi-user deployment
+    a process-wide default would bleed into every new session.
     """
     in_mnt = Path(os.environ.get("IN_MNT", "/data/in")) / user_slug
     in_mnt.mkdir(parents=True, exist_ok=True)
     out_root = Path(os.environ.get("OUT", "/data/out")) / user_slug
     out_root.mkdir(parents=True, exist_ok=True)
 
-    dataset_name = _read_active_dataset(in_mnt) or os.environ.get("DATASET_NAME", "").strip()
+    dataset_name = _read_active_dataset(in_mnt) or ""
 
     cfg = Config(
         dataset_name=dataset_name,
