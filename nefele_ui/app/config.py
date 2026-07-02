@@ -100,22 +100,20 @@ class Config:
             self.preview_dir.mkdir(parents=True, exist_ok=True)
 
 
-def load_config() -> Config:
-    """Build a Config from the current environment.
+def load_config(user_slug: str = "guest") -> Config:
+    """Build a Config scoped to *user_slug* from the current environment.
 
     Dataset name resolution order:
-      1. ``DATASET_NAME`` env var
-      2. ``<IN_MNT>/.active_dataset`` file (written by /setup)
+      1. ``<IN_MNT>/<user_slug>/.active_dataset`` file (written by /setup)
+      2. ``DATASET_NAME`` env var (process-wide fallback; ignored once the file exists)
       3. empty string -> setup mode
     """
-    in_mnt = Path(os.environ.get("IN_MNT", "/data/in"))
+    in_mnt = Path(os.environ.get("IN_MNT", "/data/in")) / user_slug
     in_mnt.mkdir(parents=True, exist_ok=True)
-    out_root = Path(os.environ.get("OUT", "/data/out"))
+    out_root = Path(os.environ.get("OUT", "/data/out")) / user_slug
     out_root.mkdir(parents=True, exist_ok=True)
 
-    dataset_name = os.environ.get("DATASET_NAME", "").strip()
-    if not dataset_name:
-        dataset_name = _read_active_dataset(in_mnt) or ""
+    dataset_name = _read_active_dataset(in_mnt) or os.environ.get("DATASET_NAME", "").strip()
 
     cfg = Config(
         dataset_name=dataset_name,

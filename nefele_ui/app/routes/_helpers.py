@@ -4,17 +4,24 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import current_app, jsonify
+from flask import g, jsonify
 
-from ..config import Config
+from ..auth import get_current_user_slug
+from ..config import Config, load_config
+from ..services.frames import resolve_frames
 
 
 def cfg() -> Config:
-    return current_app.config["APP_CONFIG"]
+    if not hasattr(g, "cfg"):
+        g.cfg = load_config(get_current_user_slug())
+    return g.cfg
 
 
 def frames() -> list[str]:
-    return current_app.config["APP_FRAMES"]
+    if not hasattr(g, "frames"):
+        c = cfg()
+        g.frames = resolve_frames(c.input_dir, c.index_suffix) if c.is_configured else []
+    return g.frames
 
 
 def json_ok(**payload: Any):

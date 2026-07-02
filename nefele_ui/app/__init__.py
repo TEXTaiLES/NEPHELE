@@ -17,7 +17,7 @@ import os
 from flask import Flask, url_for
 
 from .auth import init_auth
-from .config import Config, load_config
+from .config import load_config
 from .routes import (
     home_bp,
     hestia_bp,
@@ -27,48 +27,34 @@ from .routes import (
     setup_bp,
     welcome_bp,
 )
-from .services.frames import resolve_frames
 
 
-def _attach_state(app: Flask, cfg: Config) -> None:
-    """Store the live config + cached frame list on the app."""
-    app.config["APP_CONFIG"] = cfg
-    if cfg.is_configured:
-        app.config["APP_FRAMES"] = resolve_frames(cfg.input_dir, cfg.index_suffix)
-    else:
-        app.config["APP_FRAMES"] = []
+def rebind_dataset(user_slug: str, name: str):
+    """Return a fresh per-user Config after /setup has written the coordination file.
 
-
-def rebind_dataset(app: Flask, name: str) -> Config:
-    """Re-read config with a new dataset name and refresh the cached frame list.
-
-    Called from /setup after a successful upload. Updates ``os.environ`` so a
-    subsequent ``load_config()`` (e.g. after a process restart with the same
-    coordination file) yields the same result.
+    Only touches that user's ``<IN_MNT>/<user_slug>/.active_dataset``; never
+    mutates ``os.environ`` or any process-global state.
     """
-    os.environ["DATASET_NAME"] = name
-    cfg = load_config()
-    _attach_state(app, cfg)
-    return cfg
+    return load_config(user_slug)
 
 
 def create_app() -> Flask:
+    debug = os.environ.get("FLASK_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
+    auth_enabled = os.environ.get("AUTH_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
+
     logging.basicConfig(
-        level=logging.DEBUG if os.environ.get("FLASK_DEBUG") == "1" else logging.INFO,
+        level=logging.DEBUG if debug else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    cfg = load_config()
     app = Flask(__name__, template_folder="templates", static_folder="static")
-    # This is a single-user local tool. Disable Flask's default 12h static
-    # cache + re-read Jinja templates on every request so CSS/JS/HTML edits
-    # land on the next browser refresh instead of leaving users stuck.
+    # Disable Flask's default 12h static cache + re-read Jinja templates on
+    # every request so CSS/JS/HTML edits land on the next browser refresh.
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     app.jinja_env.auto_reload = True
-    _attach_state(app, cfg)
 
-    if cfg.auth_enabled:
+    if auth_enabled:
         # auth.py caches the Directus access_token in the Flask session so we
         # don't hit /auth/refresh on every poll request — but that needs a
         # signed-cookie secret. Refuse to start without one rather than fall

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, current_app, render_template, request
+from flask import Blueprint, g, render_template, request
 
 from ..services.dataset_meta import write_scan_meta
 from ..services.frames import resolve_frames
@@ -14,20 +14,22 @@ from ..services.vm_comms import (
     list_active_jobs,
 )
 from ..services.uploads import (
+    assert_within_root,
     sanitize_dataset_name,
     save_uploaded_images,
     write_active_dataset,
 )
 from ..services.video import VideoExtractionError, extract_frames_with_blur_filter
+from ..auth import get_current_user_slug
 from ._helpers import cfg, json_err, json_ok
 
 bp = Blueprint("setup", __name__)
 
 
-def _cancel_active_jobs() -> int:
-    """Best-effort: cancel any non-terminal HESTIA jobs before starting a new
-    dataset. The worker_poller is single-job, so leaving an old job alive would
-    block the new one until the old one finishes.
+def _cancel_active_jobs(user_slug: str) -> int:
+    """Best-effort: cancel this user's non-terminal HESTIA jobs before starting
+    a new dataset. HESTIA's list endpoint has no prefix filter, so we fetch all
+    active jobs and discard those that don't belong to this user.
 
     Errors are logged but not raised — the user just asked for a new dataset,
     not for cancellation, so we never fail the new request because cleanup
@@ -36,19 +38,22 @@ def _cancel_active_jobs() -> int:
     import logging as _logging
     log = _logging.getLogger(__name__)
     cancelled = 0
+    prefix = f"{user_slug}__"
     try:
         jobs = list_active_jobs()
     except VmCommsError as e:
         log.warning("list_active_jobs failed before new dataset: %s", e)
         return 0
     for j in jobs:
+        if not j.scan_id.startswith(prefix):
+            continue
         try:
             if cancel_job(j.job_id):
                 cancelled += 1
         except VmCommsError as e:
             log.warning("cancel job %s failed: %s", j.job_id, e)
     if cancelled:
-        log.info("cancelled %d active job(s) before new dataset", cancelled)
+        log.info("cancelled %d active job(s) for user %s before new dataset", cancelled, user_slug)
     return cancelled
 
 
@@ -66,6 +71,7 @@ def setup():
 def submit():
     """Create the dataset folder, save the uploaded files, and rebind config in-process."""
     c = cfg()
+    user_slug = get_current_user_slug()
 
     name_raw = request.form.get("name", "").strip()
     name = sanitize_dataset_name(name_raw)
@@ -76,48 +82,58 @@ def submit():
     if model not in ("sugar", "pgsr"):
         model = "sugar"
 
+    target = c.in_mnt / name
+    try:
+        assert_within_root(target, c.in_mnt)
+    except ValueError:
+        return json_err("Invalid dataset name.", http=400)
+
+    # Prefix scan_id with user_slug so two users with the same dataset name
+    # don't collide in HESTIA (scan_ids are global across all users).
+    slug_scan_id = f"{user_slug}__{name}"
+
     # In vm_comms mode the dataset name is also the HESTIA scan_id, so reject
     # collisions up front — HESTIA has no DELETE, so a duplicate POST would
     # silently append to whatever already lives under that scan_id.
     if c.uses_vm_comms:
         try:
-            if scan_exists(name):
+            if scan_exists(slug_scan_id):
                 return json_err(
                     f"A scan named '{name}' already exists in HESTIA. Pick a different dataset name.",
                     http=409,
                 )
         except Exception as e:
             return json_err(f"HESTIA check failed: {e}", http=502)
-        _cancel_active_jobs()
+        _cancel_active_jobs(user_slug)
 
     request_kill(c.in_mnt)
 
     files = request.files.getlist("images")
-    target = c.in_mnt / name
     saved, failed = save_uploaded_images(target, files)
 
     # Step 1b: in the decoupled (vm_comms) mode the worker has no shared disk,
-    # so push the just-saved images to HESTIA robot_images using the dataset
-    # name as the scan_id (the picker needs it to create a vm_comms job).
+    # so push the just-saved images to HESTIA robot_images using the prefixed
+    # scan_id (the picker needs it to create a vm_comms job).
     scan_id = ""
     if c.uses_vm_comms and saved:
         try:
-            result = upload_robot_images([target / n for n in saved], scan_id=name)
+            result = upload_robot_images([target / n for n in saved], scan_id=slug_scan_id)
         except Exception as e:
             return json_err(f"HESTIA robot-images upload failed: {e}", http=502)
-        scan_id = result.get("scan_id", "")
+        scan_id = result.get("scan_id", "") or slug_scan_id
 
     # Persists .scan_id (empty in shared_fs mode) and .model.
     write_scan_meta(target, scan_id, model)
 
     write_active_dataset(c.in_mnt, name)
 
-    # Rebind the live config so subsequent requests see the new dataset.
     from .. import rebind_dataset
-    new_cfg = rebind_dataset(current_app, name)
-    frames = resolve_frames(new_cfg.input_dir, new_cfg.index_suffix)
+    new_cfg = rebind_dataset(get_current_user_slug(), name)
+    g.cfg = new_cfg
+    frame_list = resolve_frames(new_cfg.input_dir, new_cfg.index_suffix)
+    g.frames = frame_list
 
-    return json_ok(dataset=name, saved=saved, failed=failed, total=len(frames))
+    return json_ok(dataset=name, saved=saved, failed=failed, total=len(frame_list))
 
 
 @bp.post("/setup/video")
@@ -133,6 +149,7 @@ def submit_video():
     from pathlib import Path as _Path
 
     c = cfg()
+    user_slug = get_current_user_slug()
 
     name = sanitize_dataset_name(request.form.get("name", "").strip())
     if not name:
@@ -153,20 +170,27 @@ def submit_video():
     if not video or not video.filename:
         return json_err("Please choose a video file.")
 
+    target = c.in_mnt / name
+    try:
+        assert_within_root(target, c.in_mnt)
+    except ValueError:
+        return json_err("Invalid dataset name.", http=400)
+
+    slug_scan_id = f"{user_slug}__{name}"
+
     if c.uses_vm_comms:
         try:
-            if scan_exists(name):
+            if scan_exists(slug_scan_id):
                 return json_err(
                     f"A scan named '{name}' already exists in HESTIA. Pick a different dataset name.",
                     http=409,
                 )
         except Exception as e:
             return json_err(f"HESTIA check failed: {e}", http=502)
-        _cancel_active_jobs()
+        _cancel_active_jobs(user_slug)
 
     request_kill(c.in_mnt)
 
-    target = c.in_mnt / name
     if target.exists():
         return json_err(
             f"A local dataset named '{name}' already exists. Pick another name.",
@@ -201,10 +225,10 @@ def submit_video():
     if c.uses_vm_comms and frames:
         try:
             frame_paths = [target / f["name"] for f in frames]
-            result = upload_robot_images(frame_paths, scan_id=name)
+            result = upload_robot_images(frame_paths, scan_id=slug_scan_id)
         except Exception as e:
             return json_err(f"HESTIA robot-images upload failed: {e}", http=502)
-        scan_id = result.get("scan_id", "") or name
+        scan_id = result.get("scan_id", "") or slug_scan_id
 
     write_scan_meta(target, scan_id=scan_id, model=model)
 
@@ -238,11 +262,20 @@ def confirm_video():
     drop = set(data.get("drop_frames") or [])
 
     target = c.in_mnt / name
+    try:
+        assert_within_root(target, c.in_mnt)
+    except ValueError:
+        return json_err("Invalid dataset name.", http=400)
     if not target.is_dir():
         return json_err("Pending dataset not found — did you cancel it?", http=404)
 
     for fname in drop:
         p = target / fname
+        # Guard each frame path: fname is user-supplied JSON and could be "../…".
+        try:
+            assert_within_root(p, target)
+        except ValueError:
+            continue
         if p.is_file() and p.suffix.lower() == ".jpg":
             try:
                 p.unlink()
@@ -263,10 +296,12 @@ def confirm_video():
     write_active_dataset(c.in_mnt, name)
 
     from .. import rebind_dataset
-    new_cfg = rebind_dataset(current_app, name)
-    frames = resolve_frames(new_cfg.input_dir, new_cfg.index_suffix)
+    new_cfg = rebind_dataset(get_current_user_slug(), name)
+    g.cfg = new_cfg
+    frame_list = resolve_frames(new_cfg.input_dir, new_cfg.index_suffix)
+    g.frames = frame_list
 
-    return json_ok(dataset=name, saved=remaining, total=len(frames))
+    return json_ok(dataset=name, saved=remaining, total=len(frame_list))
 
 
 @bp.post("/setup/video/cancel")
@@ -281,6 +316,10 @@ def cancel_video():
         return json_err("Missing dataset name.")
 
     target = c.in_mnt / name
+    try:
+        assert_within_root(target, c.in_mnt)
+    except ValueError:
+        return json_err("Invalid dataset name.", http=400)
     if target.is_dir():
         try:
             _shutil.rmtree(target)

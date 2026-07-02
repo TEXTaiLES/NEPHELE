@@ -99,3 +99,11 @@ def save_uploaded_images(
 def write_active_dataset(in_mnt: Path, name: str) -> None:
     """Record the chosen dataset name so it survives restarts and is visible to the shell."""
     (in_mnt / ".active_dataset").write_text(name + "\n", encoding="utf-8")
+
+
+def assert_within_root(target: Path, root: Path) -> None:
+    """Raise ValueError if *target* resolves outside *root* (catches symlink traversal too)."""
+    try:
+        target.resolve().relative_to(root.resolve())
+    except ValueError:
+        raise ValueError(f"Path {target!s} escapes its root {root!s}")
