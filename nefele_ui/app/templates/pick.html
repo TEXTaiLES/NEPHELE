@@ -71,6 +71,23 @@
   </div>
 </div>
 
+<div id="doneOverlay" class="overlay">
+  <div class="overlay-card done">
+    <div class="done-head">
+      <div class="done-ring"><div class="done-dot"></div></div>
+      <div class="done-title">All set</div>
+    </div>
+    <div class="done-body">
+      Your prompts have been saved and the pipeline can continue.
+      You can safely close this tab and go back to the terminal.
+    </div>
+    <div class="done-actions">
+      <button id="closeDoneBtn" type="button" class="btn-ghost btn">Close</button>
+      <a href="{{ url_for('results.page') }}" class="btn btn-primary">Open results page</a>
+    </div>
+  </div>
+</div>
+
 <div id="loadingOverlay" class="overlay">
   <div class="overlay-card">
     <div class="dots-row">

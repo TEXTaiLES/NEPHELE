@@ -370,10 +370,17 @@
         return;
       }
       previewModal.classList.remove('show');
-      window.location.replace('/results');
+      showToast('Confirmed');
+      doneOverlay.classList.add('show');
     } catch (err) {
       alert('Failed to confirm: ' + err);
     }
+  });
+
+  const doneOverlay = document.getElementById('doneOverlay');
+
+  document.getElementById('closeDoneBtn').addEventListener('click', () => {
+    doneOverlay.classList.remove('show');
   });
 
   document.getElementById('restartBtn').addEventListener('click', async () => {
