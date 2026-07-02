@@ -18,7 +18,6 @@
   const loadingLabel = document.getElementById('loadingLabel');
   const previewModal = document.getElementById('previewModal');
   const previewGrid = document.getElementById('previewGrid');
-  const doneOverlay = document.getElementById('doneOverlay');
 
   const imgEl = new Image();
   const points = {};
@@ -371,8 +370,7 @@
         return;
       }
       previewModal.classList.remove('show');
-      showToast('Confirmed');
-      doneOverlay.classList.add('show');
+      window.location.replace('/results');
     } catch (err) {
       alert('Failed to confirm: ' + err);
     }
@@ -396,9 +394,6 @@
     }
   });
 
-  document.getElementById('closeDoneBtn').addEventListener('click', () => {
-    doneOverlay.classList.remove('show');
-  });
 
   // ---- Animation loop ----
   function tick() {
