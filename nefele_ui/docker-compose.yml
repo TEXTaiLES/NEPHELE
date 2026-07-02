@@ -40,11 +40,11 @@ services:
       # caches the Directus access_token between requests. Generate with:
       #   python -c 'import secrets; print(secrets.token_hex(32))'
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-}
-      - DIRECTUS_URL=${DIRECTUS_URL:-https://textailes.athenarc.gr}
-      - DIRECTUS_LOGIN_URL=${DIRECTUS_LOGIN_URL:-}
-      # - APP_BASE=${APP_BASE:-https://nephele.textailes.athenarc.gr}
-      - AUTH_COOKIE_NAME=${AUTH_COOKIE_NAME:-textailes_refresh_token}
-      - AUTH_COOKIE_DOMAIN=${AUTH_COOKIE_DOMAIN:-.textailes.athenarc.gr}
+      - DIRECTUS_URL=${DIRECTUS_URL:-https://textailes.athenarc.gr}  # hardcoded in auth.py, not read from env
+      - DIRECTUS_LOGIN_URL=${DIRECTUS_LOGIN_URL:-}  # not read by the app
+      - APP_BASE=${APP_BASE:-https://nephele.textailes.athenarc.gr}
+      - AUTH_COOKIE_NAME=${AUTH_COOKIE_NAME:-textailes_refresh_token}  # not read by the app
+      - AUTH_COOKIE_DOMAIN=${AUTH_COOKIE_DOMAIN:-.textailes.athenarc.gr}  # not read by the app
       - SUGAR_RESULTS_ROOT=/data/results/sugar
       - PGSR_RESULTS_ROOT=/data/results/pgsr
     env_file:
@@ -57,7 +57,7 @@ services:
     networks:
       - default
       - hestia
-      - textailes
+      - textailes  # redundant: hestia already points to the same Docker network
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.nephele.rule=Host(`nephele.textailes.athenarc.gr`)"
@@ -74,5 +74,5 @@ networks:
   hestia:
     external: true
     name: ${HESTIA_NETWORK:-docker_textailes}
-  textailes:
+  textailes:  # redundant: hestia already points to the same Docker network
     external: true
