@@ -290,7 +290,7 @@
       if (data.pending) {
         // Still waiting — update message and retry
         const dots = '.'.repeat((attempts % 3) + 1);
-        setLoading(true, `Generating Previews${dots} (${attempts * 3}s)`);
+        setLoading(true, `Generating Previews${dots}`);
         setTimeout(() => pollPreview(jobId, attempts + 1), 3000);
         return;
       }
