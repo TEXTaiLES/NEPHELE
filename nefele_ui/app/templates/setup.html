@@ -4,6 +4,23 @@
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/setup.css') }}">
+<style>
+.upload-tip {
+  display: none;
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(0,0,0,0.03);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-top: 4px;
+  line-height: 1.6;
+}
+@media (prefers-color-scheme: dark) {
+  .upload-tip { background: rgba(255,255,255,0.04); }
+}
+.dropzone:hover ~ .upload-tip { display: block; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -53,6 +70,11 @@
             <div class="dropzone-sub">or click to browse — any image format (auto-converted to JPG)</div>
           </div>
         </div>
+        <div class="upload-tip">
+          📸 Best results: 30–100 photos taken all around the object from different heights and angles.
+          Make sure the object is well-lit and avoid motion blur or out-of-focus shots.
+          Overlapping coverage (each point visible in multiple photos) is key for good reconstruction.
+        </div>
 
         <ul id="fileList" class="file-list" hidden></ul>
 
@@ -86,6 +108,11 @@
             <div class="dropzone-title">Drop a video here</div>
             <div class="dropzone-sub">or click to browse — MP4, MOV, WebM, etc.</div>
           </div>
+        </div>
+        <div class="upload-tip">
+          🎥 Record a slow, steady walk-around of the object — 15 to 60 seconds works well.
+          Keep the object fully in frame at all times. Avoid fast pans, shaky movement,
+          or sudden changes in lighting. The app will extract frames automatically.
         </div>
 
         <div id="videoFileName" class="muted" hidden style="font-size:13px;"></div>

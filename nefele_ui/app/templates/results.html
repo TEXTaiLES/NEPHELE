@@ -41,21 +41,6 @@
     <div id="stageMessage" class="muted stage-message"></div>
   </div>
 
-  <div id="emptyCard" class="card" hidden>
-    <div class="row">
-      <div class="dots-row">
-        <div class="dot-bounce" style="animation-delay:0s;"></div>
-        <div class="dot-bounce" style="animation-delay:0.12s;"></div>
-        <div class="dot-bounce" style="animation-delay:0.24s;"></div>
-      </div>
-      <div class="title" style="font-size:16px;">Pipeline is still running</div>
-    </div>
-    <div class="muted">
-      Reconstruction hasn't finished writing outputs for <strong>{{ ds }}</strong> yet.
-      This page refreshes automatically every few seconds.
-    </div>
-  </div>
-
   <div id="filesCard" class="card" hidden data-dataset="{{ ds }}">
     <div class="row">
       <div class="title" style="font-size:16px;"><span id="filesCount">0</span> files ready</div>

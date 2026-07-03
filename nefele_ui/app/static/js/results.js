@@ -4,7 +4,6 @@
   const POLL_INTERVAL_MS = 5000;
 
   const statusPill = document.getElementById('statusPill');
-  const emptyCard = document.getElementById('emptyCard');
   const filesCard = document.getElementById('filesCard');
   const datasetName = filesCard ? filesCard.dataset.dataset || '' : '';
   const filesList = document.getElementById('filesList');
@@ -77,10 +76,7 @@
 
   if (cancelBtn) cancelBtn.addEventListener('click', onCancelClick);
 
-  // Render exactly one card at a time. Errors collapse both so we don't
-  // leave a contradictory "pipeline still running" + "0 files ready" mix.
   function setState(name) {
-    emptyCard.hidden = name !== 'empty';
     filesCard.hidden = name !== 'files';
   }
 
@@ -174,7 +170,7 @@
         }
       } else {
         setStatus('Waiting', 'waiting');
-        setState('empty');
+        setState('none');
       }
       updateCancelButton(pStatus);
     } catch (err) {
