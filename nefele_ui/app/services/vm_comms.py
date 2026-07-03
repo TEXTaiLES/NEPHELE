@@ -171,11 +171,9 @@ def find_pending_for_scan(scan_id: str) -> Optional[Job]:
 
 
 def cancel_job(job_id: str) -> bool:
-    """Cancel a non-terminal job via ``PATCH /vm-comms/{job_id}``.
+    """Cancel a non-terminal job via ``POST /nefele/{job_id}/cancel``.
 
-    HESTIA has no dedicated /cancel endpoint; status is set to 'cancelled'
-    through the normal PATCH worker path (``{"status": "cancelled"}``).
-    We do a preflight GET to avoid a no-op PATCH when the job is already
+    We do a preflight GET to avoid a no-op POST when the job is already
     terminal.
 
     Returns True if the PATCH was sent, False if the job was already terminal.
@@ -188,7 +186,7 @@ def cancel_job(job_id: str) -> bool:
     if job.is_terminal:
         log.info("cancel: job %s already terminal (%s) — skipping", job_id, job.status)
         return False
-    _request("PATCH", f"{VM_COMMS_EP}/{job_id}", json={"status": STATUS_CANCELLED})
+    _request("POST", f"{VM_COMMS_EP}/{job_id}/cancel")
     log.info("cancelled job %s", job_id)
     return True
 

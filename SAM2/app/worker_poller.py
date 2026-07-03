@@ -123,7 +123,7 @@ CONTAINER_OUT = "/data/out"
 # meshes.  These are *not* the same as OUT (which is the SAM2 I/O directory).
 #   PGSR:  <repo>/PGSR/outputs/<dataset>/mesh/*.obj
 #   SuGaR: <repo>/SUGAR/SuGaR/outputs/<group>/<dataset>/refined_mesh/data/*.obj
-_REPO = PIPELINE_SCRIPT.parent           # SAMplify_SuGaR root
+_REPO = REPO_ROOT.parent                 # SAMplify_SuGaR root
 PGSR_RESULTS_ROOT  = Path(os.environ.get("PGSR_RESULTS_ROOT",  _REPO / "PGSR" / "outputs"))
 SUGAR_RESULTS_ROOT = Path(os.environ.get("SUGAR_RESULTS_ROOT", _REPO / "SUGAR" / "SuGaR" / "outputs"))
 
