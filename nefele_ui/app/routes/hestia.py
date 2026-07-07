@@ -64,7 +64,10 @@ def load_scan():
         _downloads[scan_id] = {"status": "downloading", "downloaded": 0, "error": None}
 
     c = cfg()
-    request_kill(c.in_mnt)
+    try:
+        request_kill(c.in_mnt)
+    except Exception:
+        pass
     # Use caller-supplied name if valid, else fall back to auto-name
     custom_name = sanitize_dataset_name((data.get("dataset_name") or "").strip())
     dataset_name = custom_name if custom_name else f"scan_{scan_id[:8]}"

@@ -57,6 +57,7 @@ import json
 import logging
 import os
 import re
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -296,29 +297,70 @@ def render_preview(job: dict, input_dir: Path, indexed_dir: Path) -> List[Path]:
 def force_kill_pipeline(proc: subprocess.Popen) -> None:
     """Tear down a running pipeline subprocess + its docker children.
 
-    ``proc`` is the bash that exec'd ``run_pipeline.sh``; killing it does NOT
-    automatically kill the ``docker compose up`` children it spawned, so we
-    follow up with ``docker compose stop`` on the pipeline services. All
-    operations are best-effort — we suppress every error so a partial teardown
-    still leaves the worker free to claim the next job.
+    ``proc`` is the bash that exec'd ``run_pipeline.sh``. Three layers must die:
+
+    1. The whole host process *group* (run_pipeline.sh, the nested
+       run_*_pipeline_with_sam.sh, docker CLI clients, tee, …). Killing just
+       ``proc`` orphans the children, which is why cancel used to appear to
+       work while training kept running. Requires ``start_new_session=True``
+       on the Popen so the group is ours to kill.
+    2. One-off ``docker compose run`` containers. ``docker compose stop <svc>``
+       does NOT stop those — they aren't the service container — so we find
+       them via their compose labels and ``docker kill`` them. The ancestor
+       filter also catches the plain ``docker run pgsr:local`` fallback.
+    3. The training process exec'd inside the long-lived sam2 service
+       (``compose exec`` children survive their client). pkill inside the
+       container, never kill the container itself.
+
+    All operations are best-effort — we suppress every error so a partial
+    teardown still leaves the worker free to claim the next job.
     """
     try:
-        proc.terminate()
+        pgid = os.getpgid(proc.pid)
+        os.killpg(pgid, signal.SIGTERM)
         try:
             proc.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            proc.kill()
+            os.killpg(pgid, signal.SIGKILL)
     except Exception as e:
-        log.warning("terminate(pipeline) failed: %s", e)
-    for svc in ("pgsr", "sugar", "colmap"):
+        log.warning("killpg(pipeline) failed: %s — falling back to terminate", e)
         try:
-            subprocess.run(
-                ["docker", "compose", "stop", "-t", "5", svc],
-                cwd=str(COMPOSE_DIR), timeout=30, check=False,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            )
+            proc.kill()
         except Exception:
             pass
+
+    # Kill compose-run one-off containers for the pipeline services, plus any
+    # container started from the pgsr:local fallback image.
+    filters = [f"label=com.docker.compose.service={s}"
+               for s in ("pgsr", "sugar", "colmap")]
+    filters.append("ancestor=pgsr:local")
+    for flt in filters:
+        try:
+            ids = subprocess.run(
+                ["docker", "ps", "-q", "--filter", flt],
+                cwd=str(COMPOSE_DIR), timeout=15, check=False,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+            ).stdout.split()
+            if ids:
+                subprocess.run(
+                    ["docker", "kill", *ids],
+                    cwd=str(COMPOSE_DIR), timeout=30, check=False,
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                )
+        except Exception:
+            pass
+
+    # SAM2 runs inside the long-lived service container via `compose exec` —
+    # kill the training script inside it, not the container.
+    try:
+        subprocess.run(
+            ["docker", "compose", "exec", "-T", SAM2_SERVICE,
+             "bash", "-c", "pkill -f video_predict.py"],
+            cwd=str(COMPOSE_DIR), timeout=15, check=False,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        pass
 
 
 def run_pipeline(job: dict, dataset: str, indexed_dir: Path) -> None:
@@ -335,10 +377,14 @@ def run_pipeline(job: dict, dataset: str, indexed_dir: Path) -> None:
 
     # run_pipeline.sh expects the dataset positionally + prompts.json on disk
     # (render_preview wrote it). It no longer touches any ui container.
+    # start_new_session puts the script in its own process group so
+    # force_kill_pipeline can killpg() the whole tree (nested bash + docker
+    # CLI clients), not just the top-level bash.
     proc = subprocess.Popen(
         ["bash", str(PIPELINE_SCRIPT), dataset],
         env={**os.environ, "DATASET_NAME": dataset},
         cwd=str(PIPELINE_SCRIPT.parent),
+        start_new_session=True,
     )
     while proc.poll() is None:
         time.sleep(POLL_INTERVAL)

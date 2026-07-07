@@ -266,6 +266,52 @@ python /app/render.py \
 
 echo "[*] Mesh export done."
 
+# ====== STEP 4: Ensure an OBJ exists ======
+# The stock PGSR render.py only writes tsdf_fusion(.post).ply; our override
+# also writes an .obj, but if the pgsr:local image was rebuilt without the
+# override the .obj is missing and the worker's upload step fails. Convert
+# the newest .ply (preferring the _post variant) inside the container, which
+# has open3d available.
+
+if ! ls "$PGSR_OUT_ROOT/mesh/"*.obj >/dev/null 2>&1; then
+
+echo "[*] STEP 4: No .obj in mesh/ — converting .ply → .obj"
+
+run_in_pgsr "
+
+set -e
+
+umask 0002
+
+source /opt/conda/etc/profile.d/conda.sh
+
+conda activate pgsr
+
+python - <<'PY'
+import glob, os
+import open3d as o3d
+
+mesh_dir = '/app/output/mesh'
+plys = sorted(glob.glob(os.path.join(mesh_dir, '*.ply')), key=os.path.getmtime)
+if not plys:
+    raise SystemExit('[!] no .ply found in ' + mesh_dir)
+post = [p for p in plys if '_post' in os.path.basename(p)]
+src = (post or plys)[-1]
+dst = os.path.splitext(src)[0] + '.obj'
+mesh = o3d.io.read_triangle_mesh(src)
+o3d.io.write_triangle_mesh(dst, mesh, write_triangle_uvs=True,
+                           write_vertex_colors=True, write_vertex_normals=True)
+print(f'[*] converted {src} -> {dst}')
+PY
+
+"
+
+else
+
+echo "[*] STEP 4: .obj already present in mesh/ — skipping conversion"
+
+fi
+
 echo ""
 
 echo "======================================"

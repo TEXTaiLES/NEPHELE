@@ -27,10 +27,6 @@ WORKDIR /app
 # Clone PGSR with submodules
 RUN git clone https://github.com/zju3dv/PGSR.git --recursive .
 
-# Apply project-specific overrides on top of the upstream PGSR source
-COPY train.py render.py bake_texture.py ./
-COPY scene/ ./scene/
-
 # PyTorch 2.0.1 + CUDA 11.8
 RUN source /opt/conda/etc/profile.d/conda.sh && \
 conda create -n pgsr python=3.8 -y && \
@@ -57,6 +53,12 @@ pip install submodules/diff-plane-rasterization
 
 RUN source /opt/conda/etc/profile.d/conda.sh && conda activate pgsr && \
 pip install submodules/simple-knn
+
+# Apply project-specific overrides on top of the upstream PGSR source.
+# Kept after the heavy pip/CUDA layers so editing an override only
+# invalidates these cheap COPY layers on rebuild.
+COPY train.py render.py bake_texture.py ./
+COPY scene/ ./scene/
 
 # Entrypoint script
 RUN printf '#!/bin/bash\nsource /opt/conda/etc/profile.d/conda.sh\nconda activate pgsr\nexec "$@"\n' \
