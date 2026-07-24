@@ -16,6 +16,7 @@ SAM2/data/
 data/
 SUGAR/SuGaR/outputs/
 PGSR/
+FASTPGSR/
 nefele_ui/data/
 
 # --- per-run logs ---
