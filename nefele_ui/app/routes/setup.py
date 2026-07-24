@@ -62,7 +62,7 @@ def submit():
         return json_err("Please provide a dataset name.")
 
     model = request.form.get("model", "sugar").strip()
-    if model not in ("sugar", "pgsr"):
+    if model not in ("sugar", "pgsr", "fastpgsr"):
         model = "sugar"
 
     if c.uses_vm_comms:
@@ -112,7 +112,7 @@ def submit_video():
         return json_err("Please provide a dataset name.")
 
     model = request.form.get("model", "sugar").strip()
-    if model not in ("sugar", "pgsr"):
+    if model not in ("sugar", "pgsr", "fastpgsr"):
         model = "sugar"
 
     try:

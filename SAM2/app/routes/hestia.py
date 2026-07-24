@@ -54,7 +54,7 @@ def load_scan():
         return json_err("scan_id required", http=400)
 
     model = (data.get("model") or "sugar").strip()
-    if model not in ("sugar", "pgsr"):
+    if model not in ("sugar", "pgsr", "fastpgsr"):
         model = "sugar"
 
     with _downloads_lock:

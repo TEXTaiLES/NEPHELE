@@ -128,7 +128,7 @@ def create_job(scan_id: str, dataset_name: str, model: str, points_json: dict) -
     body = {
         "scan_id": scan_id,
         "dataset_name": dataset_name,
-        "model": model if model in ("sugar", "pgsr") else "sugar",
+        "model": model if model in ("sugar", "pgsr", "fastpgsr") else "sugar",
         "points_json": points_json,
     }
     log.info("vm_comms: create job dataset=%s scan=%s", dataset_name, scan_id)

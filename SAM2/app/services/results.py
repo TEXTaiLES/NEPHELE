@@ -33,7 +33,7 @@ def read_model(in_mnt: Path, dataset_name: str) -> str:
     if not f.is_file():
         return "sugar"
     val = f.read_text(encoding="utf-8").strip()
-    return val if val in ("sugar", "pgsr") else "sugar"
+    return val if val in ("sugar", "pgsr", "fastpgsr") else "sugar"
 
 # SuGaR drops both raw and `_postprocessed` variants in the same folder.
 # We surface the raw originals (the un-cleaned full-detail mesh). Anything

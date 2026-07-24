@@ -37,7 +37,7 @@ def submit():
         return json_err("Please provide a dataset name.")
 
     model = request.form.get("model", "sugar").strip()
-    if model not in ("sugar", "pgsr"):
+    if model not in ("sugar", "pgsr", "fastpgsr"):
         model = "sugar"
 
     request_kill(c.in_mnt)

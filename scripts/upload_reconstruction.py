@@ -74,7 +74,7 @@ def upload(dataset: str, scan_id: str) -> None:
     model = "sugar"
     if model_file.is_file():
         m = model_file.read_text().strip()
-        if m in ("sugar", "pgsr"):
+        if m in ("sugar", "pgsr", "fastpgsr"):
             model = m
 
     # Fall back: if outputs exist in PGSR dir, use pgsr

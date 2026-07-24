@@ -436,7 +436,7 @@ def upload_reconstruction(job: dict, dataset: str) -> None:
     model = "sugar"
     if model_file.is_file():
         m = model_file.read_text(encoding="utf-8").strip()
-        if m in ("sugar", "pgsr"):
+        if m in ("sugar", "pgsr", "fastpgsr"):
             model = m
     log.info("upload_reconstruction: dataset=%s model=%s", dataset, model)
 
@@ -556,12 +556,12 @@ def handle_job(job: dict) -> None:
         model_file = input_dir / ".model"
         if model_file.is_file():
             model = model_file.read_text(encoding="utf-8").strip()
-            if model not in ("sugar", "pgsr"):
+            if model not in ("sugar", "pgsr", "fastpgsr"):
                 model = "sugar"
             log.info("job %s: model=%s (from existing .model file)", job_id, model)
         else:
             model = (job.get("model") or "sugar").strip()
-            if model not in ("sugar", "pgsr"):
+            if model not in ("sugar", "pgsr", "fastpgsr"):
                 model = "sugar"
             model_file.write_text(model, encoding="utf-8")
             log.info("job %s: model=%s (written from job — file was missing)", job_id, model)

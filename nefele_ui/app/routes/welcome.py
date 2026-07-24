@@ -33,7 +33,7 @@ def set_model():
 
     data = request.get_json(silent=True) or {}
     model = (data.get("model") or "").strip()
-    if model not in ("sugar", "pgsr"):
+    if model not in ("sugar", "pgsr", "fastpgsr"):
         return json_err("model must be 'sugar' or 'pgsr'.")
 
     write_model(c.in_mnt / c.dataset_name, model)
