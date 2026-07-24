@@ -95,3 +95,26 @@ services:
     env_file:
       - .env
     restart: "no"
+
+  # Fast-PGSR (FastGS-accelerated PGSR) — a separate, isolated image from
+  # `pgsr` above. It builds its own conda env (CUDA 11.6 / PyTorch 1.12.1) and
+  # FastGS's four CUDA extensions, so the two backends never share state.
+  # Selected via the "fastpgsr" model option; idles like pgsr until a run.
+  fastpgsr:
+    build:
+      context: ./fastpgsr_overrides
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${HOST_UID:-1000}
+        GROUP_ID: ${HOST_GID:-1000}
+    image: fastpgsr:local
+    container_name: ${FASTPGSR_CONTAINER_NAME:-fastpgsr}
+    working_dir: /app
+    gpus:
+      - driver: nvidia
+        device_ids: ['${GPU_ID:-0}']
+        capabilities: [compute, utility]
+    command: ["tail", "-f", "/dev/null"]
+    env_file:
+      - .env
+    restart: "no"
