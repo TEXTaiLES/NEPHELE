@@ -568,11 +568,20 @@ def handle_job(job: dict) -> None:
                 break
 
         # Ensure run_pipeline.sh has a .model file to read.
-        # Priority: local .model file (set by welcome page, most recent user intent)
-        # wins over the job's model field (baked in at job-creation time, may be stale).
-        # Only fall back to the job field if the file is missing entirely.
+        # Priority:
+        #   1. FORCE_MODEL env — operator override: this worker runs a fixed
+        #      model for every job, regardless of the job field or any existing
+        #      .model file. Needed while the upstream (HESTIA/UI) can't yet emit
+        #      a given model (e.g. fastpgsr) — set FORCE_MODEL=fastpgsr in .env.
+        #   2. local .model file (set by welcome page, most recent user intent).
+        #   3. the job's model field (baked in at job-creation time, may be stale).
         model_file = input_dir / ".model"
-        if model_file.is_file():
+        force_model = (os.environ.get("FORCE_MODEL") or "").strip()
+        if force_model in ("sugar", "pgsr", "fastpgsr"):
+            model = force_model
+            model_file.write_text(model, encoding="utf-8")
+            log.info("job %s: model=%s (FORCE_MODEL override)", job_id, model)
+        elif model_file.is_file():
             model = model_file.read_text(encoding="utf-8").strip()
             if model not in ("sugar", "pgsr", "fastpgsr"):
                 model = "sugar"
