@@ -642,9 +642,9 @@ fi
 # --- stage Fast-PGSR overrides into the FASTPGSR working tree ---
 
 # Same pattern as PGSR above, but a separate tree: FASTPGSR/ holds the FastGS
-# checkout and fastpgsr_overrides/ carries only our single dataset_readers.py
-# patch (the Dockerfile/scene override are self-contained; FastGS's own
-# train.py/render.py are intentionally NOT overridden).
+# checkout and fastpgsr_overrides/ carries our minimal patches (dataset_readers.py
+# for the flat sparse/ layout, and render.py for an upstream mesh_path bug fix).
+# FastGS's own accelerated train.py is intentionally NOT overridden.
 
 FASTPGSR_OVR="$nephele_PATH/fastpgsr_overrides"
 

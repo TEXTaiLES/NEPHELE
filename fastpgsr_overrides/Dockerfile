@@ -6,11 +6,12 @@
 # environment.yml (CUDA 11.6 / Python 3.7.13 / PyTorch 1.12.1) and compiles the
 # four CUDA extensions FastGS needs.
 #
-# The ONLY project override applied on top of upstream FastGS is
-# scene/dataset_readers.py (patched to read COLMAP from a flat `sparse/` dir,
-# matching how run_pipeline.sh already stages COLMAP output). FastGS's own
-# train.py/render.py are the accelerated versions and are deliberately left
-# untouched.
+# Two minimal project overrides are applied on top of upstream FastGS:
+#   - scene/dataset_readers.py: read COLMAP from a flat `sparse/` dir, matching
+#     how run_pipeline.sh already stages COLMAP output.
+#   - render.py: one-line bug fix for an undefined `mesh_path` that crashes every
+#     mesh export in upstream FastGS (accelerated logic otherwise untouched).
+# FastGS's train.py (the accelerated trainer) is deliberately left untouched.
 FROM nvidia/cuda:11.6.2-devel-ubuntu20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -86,11 +87,14 @@ pip install submodules/diff-gaussian-rasterization_fastgs
 RUN source /opt/conda/etc/profile.d/conda.sh && conda activate fast-pgsr && \
 pip install submodules/fused-ssim
 
-# Apply the single project-specific override on top of upstream FastGS. Kept
-# after the heavy pip/CUDA layers so editing it only invalidates this cheap
-# COPY layer on rebuild. NOTE: we intentionally do NOT copy train.py/render.py
-# — FastGS's own versions are the accelerated ones we want.
+# Apply the project-specific overrides on top of upstream FastGS. Kept after the
+# heavy pip/CUDA layers so editing them only invalidates these cheap COPY layers
+# on rebuild. We do NOT copy train.py (FastGS's own accelerated version is what
+# we want). render.py IS copied, but only for a one-line upstream bug fix (an
+# undefined `mesh_path` that crashes every mesh export); its accelerated logic is
+# left intact — see the header in fastpgsr_overrides/render.py.
 COPY scene/dataset_readers.py ./scene/dataset_readers.py
+COPY render.py ./render.py
 
 ARG USER_ID=1000
 
