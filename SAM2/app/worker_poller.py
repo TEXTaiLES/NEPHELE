@@ -521,6 +521,19 @@ def upload_reconstruction(job: dict, dataset: str) -> None:
 def handle_job(job: dict) -> None:
     job_id = job["job_id"]
     dataset = job["dataset_name"]
+
+    # Claim-time guard: skip jobs that already reached a terminal state while
+    # queued. In Kafka mode a job can be cancelled (or finished/errored) while
+    # this worker is busy on a previous job; its notification is still sitting
+    # in the topic. The consumer re-reads current state via get_job() right
+    # before this call, so job["status"] here is authoritative. Without this
+    # check we would run download + preview before the mid-pipeline /
+    # confirm-wait cancel-checks ever fire — i.e. process a cancelled job.
+    status = (job.get("status") or "").strip()
+    if status in (S_CANCELLED, S_DONE, S_ERROR):
+        log.info("skipping job %s (dataset=%s) — already %s", job_id, dataset, status)
+        return
+
     input_dir = IN_MNT / dataset
     indexed_dir = OUT / f"{dataset}{INDEX_SUFFIX}"
     indexed_dir.mkdir(parents=True, exist_ok=True)
