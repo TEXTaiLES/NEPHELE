@@ -59,6 +59,11 @@
                   data-model="pgsr"
                   role="radio"
                   aria-checked="{{ 'true' if model == 'pgsr' else 'false' }}">PGSR</button>
+          <button type="button"
+                  class="welcome-model-opt{% if model == 'fastpgsr' %} is-active{% endif %}"
+                  data-model="fastpgsr"
+                  role="radio"
+                  aria-checked="{{ 'true' if model == 'fastpgsr' else 'false' }}">Fast-PGSR</button>
         </div>
         <span class="welcome-model-status muted" id="welcomeModelStatus"></span>
       </div>
