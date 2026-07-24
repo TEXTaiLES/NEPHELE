@@ -124,7 +124,11 @@ def _fetch_reconstruction(c):
 # --- shared_fs (mounted SuGaR / PGSR output dirs) --------------------------
 def _results_root(c):
     model = read_model(c.in_mnt, c.dataset_name)
-    return (c.pgsr_results_root, model) if model == "pgsr" else (c.sugar_results_root, model)
+    if model == "pgsr":
+        return (c.pgsr_results_root, model)
+    if model == "fastpgsr":
+        return (c.fastpgsr_results_root, model)
+    return (c.sugar_results_root, model)
 
 
 @bp.get("/results/files")

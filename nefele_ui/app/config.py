@@ -49,6 +49,7 @@ class Config:
     debug: bool
     sugar_results_root: Path   # mount of the SuGaR obj_outputs/ directory
     pgsr_results_root: Path    # mount of the PGSR outputs/ directory
+    fastpgsr_results_root: Path  # mount of the Fast-PGSR (FASTPGSR/outputs/) directory
     comms_backend: str         # "shared_fs" (legacy) | "vm_comms" (HESTIA API)
     poll_interval: float       # seconds between vm_comms job polls
 
@@ -128,6 +129,7 @@ def load_config() -> Config:
         debug=_env_bool("FLASK_DEBUG", default=False),
         sugar_results_root=Path(os.environ.get("SUGAR_RESULTS_ROOT", "/data/results/sugar")),
         pgsr_results_root=Path(os.environ.get("PGSR_RESULTS_ROOT", "/data/results/pgsr")),
+        fastpgsr_results_root=Path(os.environ.get("FASTPGSR_RESULTS_ROOT", "/data/results/fastpgsr")),
         comms_backend=os.environ.get("COMMS_BACKEND", "shared_fs").strip().lower(),
         poll_interval=float(os.environ.get("VM_COMMS_POLL_INTERVAL", "2")),
     )

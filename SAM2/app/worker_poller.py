@@ -122,10 +122,12 @@ CONTAINER_OUT = "/data/out"
 
 # Host-side directories where the reconstruction pipeline writes its output
 # meshes.  These are *not* the same as OUT (which is the SAM2 I/O directory).
-#   PGSR:  <repo>/PGSR/outputs/<dataset>/mesh/*.obj
-#   SuGaR: <repo>/SUGAR/SuGaR/outputs/<group>/<dataset>/refined_mesh/data/*.obj
+#   PGSR:     <repo>/PGSR/outputs/<dataset>/mesh/*.obj
+#   Fast-PGSR:<repo>/FASTPGSR/outputs/<dataset>/mesh/*.obj
+#   SuGaR:    <repo>/SUGAR/SuGaR/outputs/<group>/<dataset>/refined_mesh/data/*.obj
 _REPO = REPO_ROOT.parent                 # SAMplify_SuGaR root
 PGSR_RESULTS_ROOT  = Path(os.environ.get("PGSR_RESULTS_ROOT",  _REPO / "PGSR" / "outputs"))
+FASTPGSR_RESULTS_ROOT = Path(os.environ.get("FASTPGSR_RESULTS_ROOT", _REPO / "FASTPGSR" / "outputs"))
 SUGAR_RESULTS_ROOT = Path(os.environ.get("SUGAR_RESULTS_ROOT", _REPO / "SUGAR" / "SuGaR" / "outputs"))
 
 # --- mesh patching helpers (mirror of services/results.py) -------------------
@@ -442,16 +444,19 @@ def upload_reconstruction(job: dict, dataset: str) -> None:
 
     files: list = []
 
-    if model == "pgsr":
-        # PGSR writes to PGSR_RESULTS_ROOT/<dataset>/mesh/
-        search_root = PGSR_RESULTS_ROOT / dataset
+    if model in ("pgsr", "fastpgsr"):
+        # PGSR / Fast-PGSR write to <RESULTS_ROOT>/<dataset>/mesh/ with the
+        # same layout, so the harvesting below is shared — only the results
+        # root differs by model.
+        results_root = FASTPGSR_RESULTS_ROOT if model == "fastpgsr" else PGSR_RESULTS_ROOT
+        search_root = results_root / dataset
         if not search_root.exists():
             raise RuntimeError(
-                f"PGSR results dir not found: {search_root}"
+                f"{model} results dir not found: {search_root}"
             )
         all_obj = sorted(search_root.rglob("*.obj"), key=lambda p: p.stat().st_mtime)
         if not all_obj:
-            raise RuntimeError(f"no .obj produced by PGSR pipeline for {dataset}")
+            raise RuntimeError(f"no .obj produced by {model} pipeline for {dataset}")
         # Prefer the textured OBJ (has MTL+PNG) over the plain one.
         textured = [p for p in all_obj if "textured" in p.stem]
         obj = textured[-1] if textured else all_obj[-1]
