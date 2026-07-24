@@ -78,7 +78,7 @@ PIPELINE_MODEL="sugar"
 
 if [[ -f "$_MODEL_FILE" ]]; then
 	_m="$(tr -d '[:space:]' < "$_MODEL_FILE")"
-	[[ "$_m" == "pgsr" || "$_m" == "sugar" ]] && PIPELINE_MODEL="$_m"
+	[[ "$_m" == "pgsr" || "$_m" == "sugar" || "$_m" == "fastpgsr" ]] && PIPELINE_MODEL="$_m"
 fi
 
 echo "[*] Model: $PIPELINE_MODEL"
@@ -332,7 +332,12 @@ try:
 except Exception:
 	pass
 
-stages = ["sam2", "colmap", "pgsr"] if model == "pgsr" else ["sam2", "colmap", "sugar"]
+if model == "pgsr":
+	stages = ["sam2", "colmap", "pgsr"]
+elif model == "fastpgsr":
+	stages = ["sam2", "colmap", "fastpgsr"]
+else:
+	stages = ["sam2", "colmap", "sugar"]
 
 out = {
 	"dataset": dataset,
@@ -634,6 +639,23 @@ else
 	echo "[*] pgsr_overrides/ not found in $nephele_PATH (skipping override stage)"
 fi
 
+# --- stage Fast-PGSR overrides into the FASTPGSR working tree ---
+
+# Same pattern as PGSR above, but a separate tree: FASTPGSR/ holds the FastGS
+# checkout and fastpgsr_overrides/ carries only our single dataset_readers.py
+# patch (the Dockerfile/scene override are self-contained; FastGS's own
+# train.py/render.py are intentionally NOT overridden).
+
+FASTPGSR_OVR="$nephele_PATH/fastpgsr_overrides"
+
+if [ -d "$FASTPGSR_OVR" ]; then
+	echo "[*] Staging Fast-PGSR overrides from fastpgsr_overrides/ → $nephele_PATH/FASTPGSR"
+	mkdir -p "$nephele_PATH/FASTPGSR"
+	cp -rf "$FASTPGSR_OVR/." "$nephele_PATH/FASTPGSR/"
+else
+	echo "[*] fastpgsr_overrides/ not found in $nephele_PATH (skipping override stage)"
+fi
+
 PIPELINE_CURRENT_STAGE=2
 
 if [[ "$PIPELINE_MODEL" == "pgsr" ]]; then
@@ -649,6 +671,20 @@ if [[ "$PIPELINE_MODEL" == "pgsr" ]]; then
 		nephele_PATH="$nephele_PATH" \
 		COLMAP_OUT_PATH="$COLMAP_OUT_PATH" \
 		bash "$nephele_PATH/scripts/run_pgsr_pipeline_with_sam.sh" "$DATASET_NAME"
+
+elif [[ "$PIPELINE_MODEL" == "fastpgsr" ]]; then
+	# --- run Fast-PGSR ---
+
+	write_status 2 running "Training Fast-PGSR gaussian splat + exporting mesh"
+
+	echo "[*] Running Fast-PGSR pipeline for dataset: $DATASET_NAME..."
+
+	cd "$nephele_PATH"
+
+	DATASET_NAME="$DATASET_NAME" \
+		nephele_PATH="$nephele_PATH" \
+		COLMAP_OUT_PATH="$COLMAP_OUT_PATH" \
+		bash "$nephele_PATH/scripts/run_fastpgsr_pipeline_with_sam.sh" "$DATASET_NAME"
 
 else
 	# --- run SUGAR ---
