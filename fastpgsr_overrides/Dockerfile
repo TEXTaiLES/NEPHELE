@@ -45,13 +45,18 @@ RUN git clone --branch fast-pgsr --single-branch \
 https://github.com/fastgs/FastGS.git . \
 && git submodule update --init --recursive || true
 
-# fast-pgsr conda env: CUDA 11.6 / Python 3.7.13 / PyTorch 1.12.1 / tv 0.13.1
+# fast-pgsr conda env: Python 3.7.13, then PyTorch 1.12.1 / tv 0.13.1 (cu116).
+# PyTorch is installed via pip from the official cu116 wheel index rather than
+# `conda install`, because conda's SAT solver thrashes for many minutes on this
+# old pinned combo. The pip wheels bundle their own CUDA runtime; nvcc for the
+# CUDA-extension builds below comes from the CUDA 11.6 devel base image, so a
+# separate conda cudatoolkit package is not needed.
 RUN source /opt/conda/etc/profile.d/conda.sh && \
 conda create -n fast-pgsr python=3.7.13 -y && \
 conda activate fast-pgsr && \
-conda install -y -c pytorch -c conda-forge \
-pytorch=1.12.1 torchvision=0.13.1 torchaudio=0.12.1 cudatoolkit=11.6 && \
-pip install --upgrade pip
+pip install --upgrade pip && \
+pip install torch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 \
+--index-url https://download.pytorch.org/whl/cu116
 
 # pytorch3d (imported by scene/gaussian_model.py): try the prebuilt wheel that
 # matches py37/cu116/pyt1121, fall back to a source build if the wheel is gone.
