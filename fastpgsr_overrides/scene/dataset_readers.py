@@ -11,14 +11,17 @@
 # ---------------------------------------------------------------------------
 # PROJECT OVERRIDE (Nephele / fastpgsr backend)
 #
-# This is upstream FastGS's own scene/dataset_readers.py, patched in ONE way:
-# every COLMAP path was changed from the nested "sparse/0/" layout to a flat
-# "sparse/" layout. run_pipeline.sh stages the COLMAP reconstruction flat into
-# data/sparse/ (copying colmap/output/<ds>/sparse/0/* directly), so the reader
-# must look there rather than requiring a sparse/0/ subdir. This mirrors the
-# identical patch applied to the stock PGSR backend in
-# pgsr_overrides/scene/dataset_readers.py. Nothing else in FastGS is modified —
-# its accelerated train.py/render.py are used as-is.
+# This is upstream FastGS's own scene/dataset_readers.py with two patches, both
+# mirroring the stock PGSR backend (pgsr_overrides/scene/dataset_readers.py):
+#   1. Flat sparse layout: every COLMAP path changed from nested "sparse/0/" to
+#      flat "sparse/", matching how run_pipeline.sh stages COLMAP output
+#      (colmap/output/<ds>/sparse/0/* copied directly into data/sparse/).
+#   2. Camera-model support: upstream FastGS asserts on anything but
+#      PINHOLE/SIMPLE_PINHOLE; handle SIMPLE_RADIAL/RADIAL/OPENCV too (as pinhole
+#      via focal length) so distorted-camera datasets (e.g. dress) work here just
+#      as they do on pgsr. See readColmapCameras() below.
+# FastGS's accelerated train.py is used as-is; render.py carries only a separate
+# mesh_path bug fix (see fastpgsr_overrides/render.py).
 # ---------------------------------------------------------------------------
 
 import os
@@ -110,17 +113,37 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         R = np.transpose(qvec2rotmat(extr.qvec))
         T = np.array(extr.tvec)
 
-        if intr.model=="SIMPLE_PINHOLE":
+        # PROJECT OVERRIDE (Nephele / fastpgsr): upstream FastGS asserts here on
+        # anything but PINHOLE/SIMPLE_PINHOLE, which rejects common COLMAP models
+        # like SIMPLE_RADIAL. The stock PGSR backend (pgsr_overrides) handles
+        # these by treating them as pinhole via the focal length (distortion
+        # coefficients ignored). Mirror that here so fastpgsr reaches parity with
+        # pgsr on distorted-camera datasets. This also fixes SIMPLE_PINHOLE, whose
+        # focal_length_y upstream left undefined.
+        if intr.model == "SIMPLE_PINHOLE":
             focal_length_x = intr.params[0]
-            FovY = focal2fov(focal_length_x, height)
+            focal_length_y = intr.params[0]
+            FovY = focal2fov(focal_length_y, height)
             FovX = focal2fov(focal_length_x, width)
-        elif intr.model=="PINHOLE":
+        elif intr.model == "PINHOLE":
+            focal_length_x = intr.params[0]
+            focal_length_y = intr.params[1]
+            FovY = focal2fov(focal_length_y, height)
+            FovX = focal2fov(focal_length_x, width)
+        elif intr.model in ("SIMPLE_RADIAL", "RADIAL"):
+            focal_length_x = focal_length_y = intr.params[0]
+            FovY = focal2fov(focal_length_y, height)
+            FovX = focal2fov(focal_length_x, width)
+        elif intr.model in ("OPENCV", "FULL_OPENCV", "OPENCV_FISHEYE"):
             focal_length_x = intr.params[0]
             focal_length_y = intr.params[1]
             FovY = focal2fov(focal_length_y, height)
             FovX = focal2fov(focal_length_x, width)
         else:
-            assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
+            print(f"[WARNING] Unsupported COLMAP camera model '{intr.model}', treating as SIMPLE_PINHOLE")
+            focal_length_x = focal_length_y = intr.params[0]
+            FovY = focal2fov(focal_length_y, height)
+            FovX = focal2fov(focal_length_x, width)
 
         image_path = os.path.join(images_folder, os.path.basename(extr.name))
         image_name = os.path.basename(image_path).split(".")[0]
