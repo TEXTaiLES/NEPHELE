@@ -1,6 +1,6 @@
 # Nephele — nefele-training
 
-SAM2 + COLMAP + SuGaR/PGSR pipeline for background-free 3D mesh reconstruction.  
+SAM2 + COLMAP + SuGaR/PGSR/Fast-PGSR pipeline for background-free 3D mesh reconstruction.  
 The UI lives in the `nefele_ui` branch. This branch runs the GPU training workers.
 
 <p align="center">
@@ -70,9 +70,29 @@ Then open `.env` and fill in the two secrets:
 ```bash
 docker compose build
 docker compose up -d sam2 colmap pgsr
+# Optional: also start the Fast-PGSR backend (separate image, see below)
+docker compose up -d fastpgsr
 ```
 
 > `pgsr` clones the PGSR repo from GitHub during build — first build takes a few minutes.
+
+### Reconstruction models
+
+The pipeline supports three interchangeable reconstruction backends, chosen per
+dataset (the welcome-page model toggle, or the `.model` file / job `model`
+field). All three consume the same SAM2 masks + COLMAP reconstruction:
+
+| Model      | Backend                        | Image           |
+|------------|--------------------------------|-----------------|
+| `sugar`    | SuGaR (default)                | `sugar:local`   |
+| `pgsr`     | PGSR (planar Gaussian splatting)| `pgsr:local`    |
+| `fastpgsr` | Fast-PGSR (FastGS-accelerated) | `fastpgsr:local`|
+
+> **Fast-PGSR builds a separate image.** It clones `fastgs/FastGS` at the
+> `fast-pgsr` branch and its own conda env (CUDA 11.6 / Python 3.7.13 /
+> PyTorch 1.12.1), fully isolated from `pgsr:local`. Requires a GPU with
+> Compute Capability 7.0+. Its results land in `FASTPGSR/outputs/` (override
+> with `FASTPGSR_RESULTS_ROOT`).
 
 ---
 

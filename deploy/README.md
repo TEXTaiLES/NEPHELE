@@ -1,7 +1,7 @@
 # Deploying the vm_comms worker poller on the SAM VM
 
 The poller is a **host process** on the SAM VM (the same machine that runs the
-`sam2`/`colmap`/`sugar`/`pgsr` containers and `run_pipeline.sh`). It is *not*
+`sam2`/`colmap`/`sugar`/`pgsr`/`fastpgsr` containers and `run_pipeline.sh`). It is *not*
 a container — it needs the host's `docker` CLI to drive the pipeline.
 
 ## One-time install
@@ -62,6 +62,7 @@ logs a warning and falls back to polling automatically.
   rewrites `/opt/samplify_sugar` → `$PWD` so the unit matches your
   layout. Default `User=youruser` is also rewritten to `$USER`.
 - The pipeline containers ready: `cd samplify_sugar && docker compose up -d sam2 colmap sugar pgsr`
+  (add `fastpgsr` if you want the FastGS-accelerated backend available: `docker compose up -d fastpgsr`)
   (note: there is no `ui` service here anymore — the UI lives in the
   `nefele_ui` project on the HESTIA host).
 

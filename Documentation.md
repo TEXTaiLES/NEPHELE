@@ -6,6 +6,22 @@ nephele is a two-stage image-to-3D pipeline that combines interactive 2D segment
 
 This document describes architecture, data flow, installation, configuration, usage examples, internals, recommended parameters, troubleshooting, and future improvements.
 
+### Reconstruction backends
+
+The reconstruction stage is pluggable: a per-dataset `model` value selects one of
+three interchangeable backends, all fed by the same SAM2 masks + COLMAP output.
+
+- **`sugar`** (default) — SuGaR surface-aligned Gaussian splatting.
+- **`pgsr`** — PGSR (planar-based Gaussian splatting), image `pgsr:local`.
+- **`fastpgsr`** — Fast-PGSR, the FastGS-accelerated PGSR variant. It builds a
+  **separate** image (`fastpgsr:local`) that clones `fastgs/FastGS@fast-pgsr`
+  with its own conda env (CUDA 11.6 / Python 3.7.13 / PyTorch 1.12.1) and CUDA
+  extensions, fully isolated from `pgsr:local`. It uses FastGS's own accelerated
+  `train.py`/`render.py`; the only project patch is a COLMAP dataset-reader
+  tweak (`fastpgsr_overrides/scene/dataset_readers.py`) so it reads the flat
+  `sparse/` layout the pipeline already stages. Requires GPU Compute Capability
+  7.0+. Output meshes land in `FASTPGSR/outputs/<dataset>/mesh/`.
+
 ---
 
 ## Table of Contents
